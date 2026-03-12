@@ -1,0 +1,39 @@
+# Byte-compiled files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+
+# Environment files
+.env
+.env.local
+
+# Database
+*.db
+*.sqlite3
+
+# IDE
+.vscode/
+.idea/
+
+# Distribution
+dist/
+build/
+*.egg-info/
+
+# Test coverage
+htmlcov/
+.coverage
+.pytest_cache/
+
+# Playwright
+playwright-report/
+test-results/
+
+# Generated files
+data/tailored_resumes/
+screenshots/

@@ -1,0 +1,60 @@
+{
+    "personal": {
+        "first_name": "Your",
+        "last_name": "Name",
+        "email": "your.email@example.com",
+        "phone": "+1-555-123-4567"
+    },
+    "preferences": {
+        "job_titles": [
+            "Software Engineer",
+            "Senior Software Engineer",
+            "Full Stack Developer",
+            "Backend Engineer"
+        ],
+        "locations": [
+            "San Francisco, CA",
+            "New York, NY",
+            "Remote"
+        ],
+        "remote_preference": "hybrid",
+        "salary_range": {
+            "min": 120000,
+            "max": 180000,
+            "currency": "USD"
+        },
+        "experience_years": 5
+    },
+    "work_authorization": {
+        "status": "authorized",
+        "requires_sponsorship": false,
+        "visa_type": null
+    },
+    "skills": [
+        "Python",
+        "JavaScript",
+        "TypeScript",
+        "React",
+        "Node.js",
+        "PostgreSQL",
+        "AWS",
+        "Docker",
+        "Kubernetes"
+    ],
+    "application_defaults": {
+        "willing_to_relocate": true,
+        "notice_period": "2 weeks",
+        "start_date": "flexible",
+        "linkedin_url": "linkedin.com/in/yourprofile",
+        "portfolio_url": "yourportfolio.com",
+        "github_url": "github.com/yourusername"
+    },
+    "excluded_companies": [
+        "Company to avoid 1",
+        "Company to avoid 2"
+    ],
+    "target_companies": [
+        "Dream Company 1",
+        "Dream Company 2"
+    ]
+}

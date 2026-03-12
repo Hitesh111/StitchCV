@@ -1,0 +1,86 @@
+{
+    "personal": {
+        "name": "Your Name",
+        "email": "your.email@example.com",
+        "phone": "+1-555-123-4567",
+        "location": "City, State",
+        "linkedin": "linkedin.com/in/yourprofile",
+        "github": "github.com/yourusername",
+        "portfolio": "yourportfolio.com"
+    },
+    "summary": "Experienced software engineer with X years of expertise in building scalable applications. Passionate about clean code, system design, and delivering impactful solutions.",
+    "skills": [
+        "Python",
+        "JavaScript",
+        "TypeScript",
+        "React",
+        "Node.js",
+        "PostgreSQL",
+        "MongoDB",
+        "AWS",
+        "Docker",
+        "Kubernetes",
+        "Git",
+        "REST APIs",
+        "GraphQL",
+        "Machine Learning",
+        "System Design"
+    ],
+    "experience": [
+        {
+            "company": "Company Name",
+            "title": "Senior Software Engineer",
+            "location": "City, State",
+            "start_date": "2022-01",
+            "end_date": "present",
+            "highlights": [
+                "Led development of microservices architecture serving 1M+ daily users",
+                "Reduced API latency by 40% through optimization and caching strategies",
+                "Mentored 5 junior developers and conducted code reviews",
+                "Implemented CI/CD pipelines reducing deployment time by 60%"
+            ]
+        },
+        {
+            "company": "Previous Company",
+            "title": "Software Engineer",
+            "location": "City, State",
+            "start_date": "2019-06",
+            "end_date": "2021-12",
+            "highlights": [
+                "Developed full-stack features using React and Node.js",
+                "Built real-time notification system handling 100K+ concurrent connections",
+                "Collaborated with product team to define technical requirements",
+                "Improved test coverage from 45% to 85%"
+            ]
+        }
+    ],
+    "education": [
+        {
+            "institution": "University Name",
+            "degree": "Bachelor of Science",
+            "field": "Computer Science",
+            "graduation_year": "2019",
+            "gpa": "3.8/4.0",
+            "highlights": [
+                "Dean's List",
+                "Senior project: ML-based recommendation system"
+            ]
+        }
+    ],
+    "certifications": [
+        "AWS Certified Solutions Architect",
+        "Google Cloud Professional Data Engineer"
+    ],
+    "projects": [
+        {
+            "name": "Open Source Project",
+            "description": "Description of the project and your contributions",
+            "technologies": [
+                "Python",
+                "FastAPI",
+                "PostgreSQL"
+            ],
+            "url": "github.com/yourproject"
+        }
+    ]
+}
