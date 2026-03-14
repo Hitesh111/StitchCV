@@ -1,8 +1,11 @@
 import { useState } from 'react';
 import { Search, MapPin, Loader2, Rocket } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
+import { NudgeBar } from '../components/Shared';
 
 export default function Discover({ addToast }) {
+    const navigate = useNavigate();
     const [query, setQuery] = useState('');
     const [location, setLocation] = useState('');
     const [source, setSource] = useState('linkedin');
@@ -37,90 +40,93 @@ export default function Discover({ addToast }) {
     }
 
     return (
-        <div>
-            <div className="page-header">
-                <h2>Discover Jobs</h2>
-                <p>Search and discover new job listings from online sources</p>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <div className="page-header" style={{ width: '100%', maxWidth: 500, textAlign: 'center', marginBottom: 40 }}>
+                <h2 className="page-title">Discover</h2>
+                <p className="page-subtitle">Scrape new opportunities directly into your pipeline.</p>
             </div>
 
-            <div className="card" style={{ maxWidth: 640, marginBottom: 32 }}>
+            <div className="card" style={{ width: '100%', maxWidth: 500, marginBottom: 32 }}>
                 <form onSubmit={handleDiscover}>
+                    
+                    <div className="form-group" style={{ marginBottom: 24 }}>
+                        <label className="form-label label-caps">Source</label>
+                        <div className="pill-group" style={{ display: 'flex' }}>
+                            <button
+                                type="button"
+                                className={`pill-tab ${source === 'linkedin' ? 'active-yellow' : ''}`}
+                                onClick={() => setSource('linkedin')}
+                                disabled={loading}
+                                style={{ flex: 1 }}
+                            >
+                                LinkedIn
+                            </button>
+                            <button
+                                type="button"
+                                className={`pill-tab ${source === 'indeed' ? 'active-yellow' : ''}`}
+                                onClick={() => {}}
+                                disabled={true}
+                                style={{ flex: 1, opacity: 0.5, cursor: 'not-allowed' }}
+                                title="Coming soon"
+                            >
+                                Indeed
+                            </button>
+                        </div>
+                    </div>
+
                     <div className="form-group">
-                        <label className="form-label">Job Title / Keywords</label>
+                        <label className="form-label label-caps">Job Title / Keywords</label>
                         <input
                             type="text"
                             className="form-input"
-                            placeholder="e.g. Senior Software Engineer, React Developer..."
+                            placeholder="e.g. Senior Frontend Engineer..."
                             value={query}
                             onChange={e => setQuery(e.target.value)}
                             disabled={loading}
                         />
                     </div>
 
-                    <div className="form-row">
-                        <div className="form-group">
-                            <label className="form-label">Location</label>
+                    <div className="form-row" style={{ gap: 16 }}>
+                        <div className="form-group" style={{ flex: 2 }}>
+                            <label className="form-label label-caps">Location <span>(Optional)</span></label>
                             <div style={{ position: 'relative' }}>
                                 <input
                                     type="text"
                                     className="form-input"
-                                    placeholder="e.g. San Francisco, Remote..."
+                                    placeholder="e.g. Remote, NY..."
                                     value={location}
                                     onChange={e => setLocation(e.target.value)}
                                     disabled={loading}
-                                    style={{ paddingLeft: 36 }}
+                                    style={{ paddingLeft: 34 }}
                                 />
-                                <MapPin size={16} style={{
-                                    position: 'absolute',
-                                    left: 12,
-                                    top: '50%',
-                                    transform: 'translateY(-50%)',
-                                    color: 'var(--text-muted)'
-                                }} />
+                                <MapPin size={14} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
                             </div>
                         </div>
 
-                        <div className="form-group">
-                            <label className="form-label">Source</label>
-                            <select
-                                className="form-select"
-                                value={source}
-                                onChange={e => setSource(e.target.value)}
+                        <div className="form-group" style={{ flex: 1 }}>
+                            <label className="form-label label-caps">Count</label>
+                            <input
+                                type="number"
+                                className="form-input"
+                                min="1"
+                                max="100"
+                                value={maxJobs}
+                                onChange={e => setMaxJobs(parseInt(e.target.value) || 20)}
                                 disabled={loading}
-                            >
-                                <option value="linkedin">LinkedIn</option>
-                            </select>
+                            />
                         </div>
-                    </div>
-
-                    <div className="form-group">
-                        <label className="form-label">Max Results</label>
-                        <input
-                            type="number"
-                            className="form-input"
-                            min="1"
-                            max="100"
-                            value={maxJobs}
-                            onChange={e => setMaxJobs(parseInt(e.target.value) || 20)}
-                            disabled={loading}
-                            style={{ width: 120 }}
-                        />
                     </div>
 
                     <button
                         type="submit"
-                        className="btn btn-primary"
+                        className="btn btn-primary btn-full"
                         disabled={loading || !query.trim()}
                         style={{ marginTop: 8 }}
                     >
                         {loading ? (
-                            <>
-                                <Loader2 size={16} className="spin-icon" /> Discovering...
-                            </>
+                            <><Loader2 size={16} className="spin-icon" /> Scraping {source}...</>
                         ) : (
-                            <>
-                                <Rocket size={16} /> Start Discovery
-                            </>
+                            <><Rocket size={16} color="#1C1917" /> Start Discovery</>
                         )}
                     </button>
                 </form>
@@ -128,40 +134,33 @@ export default function Discover({ addToast }) {
 
             {/* Result card */}
             {result && (
-                <div className="card" style={{ maxWidth: 640 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                        <div style={{
-                            width: 48,
-                            height: 48,
-                            borderRadius: 'var(--radius-sm)',
-                            background: 'var(--accent-success-glow)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                        }}>
-                            <Search size={24} style={{ color: 'var(--accent-success)' }} />
+                <div className="card" style={{ width: '100%', maxWidth: 500, borderColor: 'var(--yellow)', backgroundColor: 'var(--yellow-muted)', marginBottom: 32 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                        <div style={{ width: 40, height: 40, borderRadius: 'var(--radius-btn)', background: 'var(--yellow)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <Search size={20} color="#1C1917" />
                         </div>
                         <div>
-                            <h3 style={{ fontSize: 16, fontWeight: 600 }}>{result.message}</h3>
-                            <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>
-                                Head over to the Jobs page to view and analyze them
-                            </p>
+                            <h3 style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 2 }}>{result.message}</h3>
+                            <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>View and score them in the Jobs list.</p>
                         </div>
                     </div>
                 </div>
             )}
 
-            {/* Tips card */}
-            <div className="card" style={{ maxWidth: 640, marginTop: 24 }}>
-                <h3 style={{ fontSize: 14, fontWeight: 600, marginBottom: 12, color: 'var(--text-accent)' }}>
-                    💡 Discovery Tips
-                </h3>
-                <ul style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 2, paddingLeft: 20 }}>
-                    <li>Use specific job titles for better results</li>
-                    <li>Add location to narrow down listings</li>
-                    <li>After discovery, use <strong>Analyze</strong> from the Dashboard to score matches</li>
-                    <li>LinkedIn requires you to be logged in via browser — the scraper will prompt you</li>
-                </ul>
+            {/* Tips block */}
+            <div className="tips-block" style={{ width: '100%', maxWidth: 500, marginBottom: 40 }}>
+                <div className="tips-title">Discovery Tips</div>
+                <div className="tip-item"><span className="arrow">→</span> Be specific with titles to improve AI matching accuracy.</div>
+                <div className="tip-item"><span className="arrow">→</span> The scraper runs a real browser; it may ask you to log in to LinkedIn on the first run.</div>
+                <div className="tip-item"><span className="arrow">→</span> Higher counts take longer. Start with 10-20.</div>
+            </div>
+
+            <div style={{ width: '100%' }}>
+                <NudgeBar 
+                    text="After discovery, review in Jobs"
+                    buttonText="Go to Jobs"
+                    onClick={() => navigate('/jobs')}
+                />
             </div>
         </div>
     );

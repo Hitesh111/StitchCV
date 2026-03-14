@@ -21,7 +21,7 @@ class Settings(BaseSettings):
     # Gemini API
     gemini_api_key: str = Field(..., description="Primary Google Gemini API key")
     gemini_api_key_fallback: str = Field(default="", description="Fallback Gemini API key")
-    gemini_model: str = Field(default="gemini-2.5-flash", description="Gemini model to use")
+    gemini_model: str = Field(default="gemini-1.5-flash", description="Gemini model to use")
     gemini_requests_per_minute: int = Field(default=15, description="Rate limit for Gemini API")
 
     @property

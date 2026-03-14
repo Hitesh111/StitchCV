@@ -1,31 +1,23 @@
 import { useState, useEffect } from 'react';
-import {
-    Briefcase,
-    FileText,
-    TrendingUp,
-    Clock,
-    CheckCircle,
-    AlertCircle,
-    Zap,
-    BarChart3,
-} from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Briefcase, FileText, Target, Activity, Zap } from 'lucide-react';
 import api from '../services/api';
+import { NudgeBar, ST_COLORS, StatusIcon } from '../components/Shared';
 
 export default function Dashboard({ addToast }) {
+    const navigate = useNavigate();
     const [stats, setStats] = useState(null);
     const [loading, setLoading] = useState(true);
     const [actionLoading, setActionLoading] = useState('');
+    const userName = "Hitesh"; // Or fetch from profile API
 
-    useEffect(() => {
-        loadStats();
-    }, []);
+    useEffect(() => { loadStats(); }, []);
 
     async function loadStats() {
         try {
             const data = await api.getStats();
             setStats(data);
-        } catch (err) {
-            // If API is down, show placeholder stats
+        } catch {
             setStats({
                 jobs: { new: 0, analyzed: 0, matched: 0, applied: 0, skipped: 0 },
                 applications: { draft: 0, pending_review: 0, submitted: 0, failed: 0 },
@@ -36,20 +28,12 @@ export default function Dashboard({ addToast }) {
         }
     }
 
-    async function handleAction(action, label) {
+    async function handleAction(action) {
         setActionLoading(action);
         try {
             let result;
-            switch (action) {
-                case 'analyze':
-                    result = await api.analyze({ limit: 10 });
-                    break;
-                case 'prepare':
-                    result = await api.prepare({ min_score: 0.5, limit: 5 });
-                    break;
-                default:
-                    return;
-            }
+            if (action === 'analyze') result = await api.analyze({ limit: 10 });
+            else if (action === 'prepare') result = await api.prepare({ min_score: 0.5, limit: 5 });
             addToast(result.message, 'success');
             loadStats();
         } catch (err) {
@@ -61,126 +45,119 @@ export default function Dashboard({ addToast }) {
 
     if (loading) {
         return (
-            <div className="loading-container">
-                <div className="spinner" />
-                <p>Loading dashboard...</p>
+            <div className="loading-state">
+                <div className="skeleton" style={{ width: 200, height: 32, marginBottom: 8 }} />
+                <div className="skeleton" style={{ width: 300, height: 20, marginBottom: 32 }} />
+                <div className="stats-grid" style={{ width: '100%' }}>
+                    {[1, 2, 3, 4].map(i => <div key={i} className="card skeleton" style={{ height: 110 }} />)}
+                </div>
             </div>
         );
     }
 
     const totalJobs = stats ? Object.values(stats.jobs).reduce((a, b) => a + b, 0) : 0;
     const totalApps = stats ? Object.values(stats.applications).reduce((a, b) => a + b, 0) : 0;
+    const matchedJobs = stats?.jobs?.matched || 0;
+    const pendingApps = stats?.applications?.pending_review || 0;
+
+    const topStats = [
+        { label: 'Total Jobs', value: totalJobs, sub: `+${stats?.recent?.jobs_discovered_24h || 0} today` },
+        { label: 'Applications', value: totalApps, sub: `+${stats?.recent?.applications_created_24h || 0} today` },
+        { label: 'Matched', value: matchedJobs, sub: 'Ready to apply', isHighlight: true },
+        { label: 'Pending Review', value: pendingApps, sub: 'Awaiting approval' },
+    ];
 
     return (
         <div>
-            <div className="page-header">
-                <h2>Dashboard</h2>
-                <p>Overview of your job application pipeline</p>
-            </div>
-
-            {/* Quick Actions */}
-            <div className="actions-bar">
-                <button
-                    className="btn btn-primary"
-                    onClick={() => handleAction('analyze', 'Analyze')}
-                    disabled={!!actionLoading}
-                >
-                    <Zap size={16} />
-                    {actionLoading === 'analyze' ? 'Analyzing...' : 'Analyze Jobs'}
-                </button>
-                <button
-                    className="btn btn-secondary"
-                    onClick={() => handleAction('prepare', 'Prepare')}
-                    disabled={!!actionLoading}
-                >
-                    <FileText size={16} />
-                    {actionLoading === 'prepare' ? 'Preparing...' : 'Prepare Applications'}
-                </button>
+            <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <div>
+                    <h2 className="page-title">Good morning, {userName} 👋</h2>
+                    <p className="page-subtitle">Here's your job hunt at a glance.</p>
+                </div>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                    <button className="btn btn-ghost" onClick={() => handleAction('prepare')} disabled={!!actionLoading}>
+                        {actionLoading === 'prepare' ? '📄 Preparing...' : '📄 Prepare Applications'}
+                    </button>
+                    <button className="btn btn-primary" onClick={() => handleAction('analyze')} disabled={!!actionLoading}>
+                        {actionLoading === 'analyze' ? '⚡ Analyzing...' : '⚡ Analyze Jobs'}
+                    </button>
+                </div>
             </div>
 
             {/* Stats Grid */}
             <div className="stats-grid">
-                <div className="stat-card">
-                    <div className="stat-label">Total Jobs</div>
-                    <div className="stat-value">{totalJobs}</div>
-                    <div className="stat-subtitle">
-                        {stats?.recent?.jobs_discovered_24h || 0} new in 24h
+                {topStats.map(({ label, value, sub, isHighlight }) => (
+                    <div className={`card stat-card ${isHighlight ? 'highlight' : ''}`} key={label} style={isHighlight ? { backgroundColor: 'var(--yellow-muted)', borderColor: 'var(--yellow-border)' } : {}}>
+                        <div className="label-caps" style={isHighlight ? { color: 'var(--yellow-dark)' } : {}}>{label}</div>
+                        <div className="stat-val-large" style={isHighlight ? { color: 'var(--yellow-dark)' } : {}}>{value}</div>
+                        <div style={{ fontSize: '10.5px', color: isHighlight ? 'var(--yellow-dark)' : 'var(--text-muted)', marginTop: '4px', opacity: 0.8 }}>{sub}</div>
+                    </div>
+                ))}
+            </div>
+
+            {/* Pipeline Cards */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+
+                {/* Jobs Pipeline */}
+                <div className="card">
+                    <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                        <h3 className="card-title">Jobs Pipeline</h3>
+                        <span className="label-caps">{totalJobs} total</span>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                        {Object.entries(stats?.jobs || {}).map(([status, count]) => {
+                            const isMatched = status === 'matched';
+                            return (
+                                <div key={status} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 0', borderBottom: '1px solid var(--border)' }}>
+                                    <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: ST_COLORS[status] || '#A8A29E' }} />
+                                    <span style={{ fontSize: '13px', flex: 1, textTransform: 'capitalize', fontWeight: 600 }}>
+                                        {status.replace('_', ' ')}
+                                    </span>
+                                    {isMatched && count > 0 ? (
+                                        <span className="chip chip-yellow">{count}</span>
+                                    ) : (
+                                        <span className="chip chip-neutral">{count}</span>
+                                    )}
+                                </div>
+                            );
+                        })}
                     </div>
                 </div>
 
-                <div className="stat-card">
-                    <div className="stat-label">Applications</div>
-                    <div className="stat-value">{totalApps}</div>
-                    <div className="stat-subtitle">
-                        {stats?.recent?.applications_created_24h || 0} created in 24h
+                {/* Applications Pipeline */}
+                <div className="card">
+                    <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                        <h3 className="card-title">Applications</h3>
+                        <span className="label-caps">{totalApps} total</span>
                     </div>
-                </div>
 
-                <div className="stat-card">
-                    <div className="stat-label">Matched Jobs</div>
-                    <div className="stat-value">{stats?.jobs?.matched || 0}</div>
-                    <div className="stat-subtitle">Ready for application</div>
-                </div>
-
-                <div className="stat-card">
-                    <div className="stat-label">Pending Review</div>
-                    <div className="stat-value">{stats?.applications?.pending_review || 0}</div>
-                    <div className="stat-subtitle">Awaiting approval</div>
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                        {Object.entries(stats?.applications || {}).map(([status, count]) => {
+                            const isActionable = status === 'pending_review' || status === 'draft';
+                            return (
+                                <div key={status} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 0', borderBottom: '1px solid var(--border)' }}>
+                                    <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: ST_COLORS[status] || '#A8A29E' }} />
+                                    <span style={{ fontSize: '13px', flex: 1, textTransform: 'capitalize', fontWeight: 600 }}>
+                                        {status.replace('_', ' ')}
+                                    </span>
+                                    {isActionable && count > 0 ? (
+                                        <span className="chip chip-yellow">{count}</span>
+                                    ) : (
+                                        <span className="chip chip-neutral">{count}</span>
+                                    )}
+                                </div>
+                            );
+                        })}
+                    </div>
                 </div>
             </div>
 
-            {/* Pipeline Breakdown */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                <div className="card">
-                    <div className="card-header">
-                        <h3><Briefcase size={16} style={{ marginRight: 8, verticalAlign: 'middle' }} />Jobs Pipeline</h3>
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                        {Object.entries(stats?.jobs || {}).map(([status, count]) => (
-                            <div key={status} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                    <StatusIcon status={status} />
-                                    <span style={{ fontSize: 14, textTransform: 'capitalize' }}>{status.replace('_', ' ')}</span>
-                                </div>
-                                <span style={{ fontWeight: 600, fontSize: 16, color: 'var(--text-accent)' }}>{count}</span>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-
-                <div className="card">
-                    <div className="card-header">
-                        <h3><FileText size={16} style={{ marginRight: 8, verticalAlign: 'middle' }} />Applications Pipeline</h3>
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                        {Object.entries(stats?.applications || {}).map(([status, count]) => (
-                            <div key={status} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                    <StatusIcon status={status} />
-                                    <span style={{ fontSize: 14, textTransform: 'capitalize' }}>{status.replace('_', ' ')}</span>
-                                </div>
-                                <span style={{ fontWeight: 600, fontSize: 16, color: 'var(--text-accent)' }}>{count}</span>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </div>
+            <NudgeBar 
+                text={totalJobs === 0 ? "Nothing here yet — start by discovering jobs." : "Need more options? Run a new discovery search."}
+                buttonText="Go to Discover"
+                onClick={() => navigate('/discover')}
+            />
         </div>
     );
-}
-
-function StatusIcon({ status }) {
-    const style = { width: 18, height: 18 };
-    switch (status) {
-        case 'new': return <Clock style={{ ...style, color: 'var(--accent-info)' }} />;
-        case 'analyzed': return <BarChart3 style={{ ...style, color: 'var(--accent-warning)' }} />;
-        case 'matched': return <TrendingUp style={{ ...style, color: 'var(--accent-success)' }} />;
-        case 'applied':
-        case 'submitted': return <CheckCircle style={{ ...style, color: '#a78bfa' }} />;
-        case 'pending_review':
-        case 'draft': return <AlertCircle style={{ ...style, color: 'var(--accent-warning)' }} />;
-        case 'failed':
-        case 'rejected': return <AlertCircle style={{ ...style, color: 'var(--accent-danger)' }} />;
-        default: return <Clock style={{ ...style, color: 'var(--text-muted)' }} />;
-    }
 }

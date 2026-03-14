@@ -22,9 +22,10 @@ class ResumeTailorState(TypedDict):
 async def analyze_jd(state: ResumeTailorState):
     """Analyze the Job Description to extract key requirements."""
     llm = ChatGoogleGenerativeAI(
-        model=settings.gemini_model,
+        model="gemini-1.5-flash",
         google_api_key=settings.active_gemini_api_key,
-        temperature=0.1
+        temperature=0.1,
+        max_retries=1
     )
     
     prompt = f"""Analyze the following job description and extract the key requirements.
@@ -85,9 +86,10 @@ async def retrieve_experiences(state: ResumeTailorState):
 async def draft_resume(state: ResumeTailorState):
     """Draft the final tailored resume JSON using the retrieved experiences."""
     llm = ChatGoogleGenerativeAI(
-        model=settings.gemini_model,
+        model="gemini-1.5-flash",
         google_api_key=settings.active_gemini_api_key,
-        temperature=0.2
+        temperature=0.2,
+        max_retries=1
     )
     
     # Extract values BEFORE building f-string to avoid {{}} TypeError bug
@@ -168,9 +170,10 @@ CRITICAL: For personal_info (name, email, phone, links), you MUST copy the value
 async def score_resumes(state: ResumeTailorState):
     """Score both the original and tailored resume against the JD."""
     llm = ChatGoogleGenerativeAI(
-        model=settings.gemini_model,
+        model="gemini-1.5-flash",
         google_api_key=settings.active_gemini_api_key,
-        temperature=0.0
+        temperature=0.0,
+        max_retries=1
     )
 
     jd_analysis_str = json.dumps(state['jd_analysis'], indent=2)
