@@ -57,16 +57,16 @@ export default function Applications({ addToast }) {
 
     return (
         <div>
-            <div className="page-header page-hero" style={{ marginBottom: 24 }}>
+            <div className="page-header page-hero page-hero-compact" style={{ marginBottom: 24 }}>
                 <div className="page-kicker">Application tracker</div>
                 <div className="page-header-row">
                     <div>
                         <h2 className="page-title">Applications</h2>
-                        <p className="page-subtitle">Track and manage your submitted applications.</p>
+                        <p className="page-subtitle">Track approvals, submissions, and failures across your pipeline.</p>
                     </div>
                     <div className="page-header-actions">
                         <button className="btn btn-ghost" onClick={loadApplications}>
-                            Refresh List
+                            Refresh
                         </button>
                     </div>
                 </div>

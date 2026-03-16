@@ -8,10 +8,10 @@ import json
 from typing import Any, Optional
 
 import structlog
-from fastapi import FastAPI, HTTPException, Depends, UploadFile, File, Form, Query
-from fastapi.responses import JSONResponse, StreamingResponse, Response
+from fastapi import FastAPI, HTTPException, Depends, UploadFile, File, Form, Query, Request
+from fastapi.responses import JSONResponse, StreamingResponse, Response, RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from hireflow.models import (
     init_db,
@@ -22,6 +22,23 @@ from hireflow.models import (
     ApplicationStatus,
     ApplicationLog,
     ResumeVersion,
+    User,
+)
+from hireflow.auth import (
+    SESSION_COOKIE_NAME,
+    OAUTH_STATE_COOKIE_NAME,
+    build_google_oauth_url,
+    build_linkedin_oauth_url,
+    complete_google_oauth,
+    complete_linkedin_oauth,
+    create_db_session,
+    delete_session_by_token,
+    find_user_by_email,
+    get_current_user_optional,
+    hash_password,
+    sanitize_next_path,
+    verify_password,
+    require_current_user,
 )
 from hireflow.agents import (
     JobDiscoveryAgent,
@@ -31,6 +48,7 @@ from hireflow.agents import (
     ApplicationAgent,
     LoggingMemoryAgent,
 )
+from hireflow.config import settings
 from hireflow.scrapers import LinkedInScraper
 
 logger = structlog.get_logger()
@@ -117,6 +135,52 @@ class MessageResponse(BaseModel):
     count: Optional[int] = None
 
 
+class AuthUserResponse(BaseModel):
+    id: str
+    email: str
+    full_name: str
+    avatar_url: Optional[str] = None
+
+
+class SignupRequest(BaseModel):
+    email: str
+    full_name: str = Field(min_length=2, max_length=255)
+    password: str = Field(min_length=8, max_length=128)
+
+
+class LoginRequest(BaseModel):
+    email: str
+    password: str = Field(min_length=8, max_length=128)
+
+
+def _serialize_user(user: User) -> AuthUserResponse:
+    return AuthUserResponse(
+        id=user.id,
+        email=user.email,
+        full_name=user.full_name,
+        avatar_url=user.avatar_url,
+    )
+
+
+def _set_session_cookie(response: Response, token: str) -> None:
+    response.set_cookie(
+        key=SESSION_COOKIE_NAME,
+        value=token,
+        httponly=True,
+        secure=False,
+        samesite="lax",
+        max_age=14 * 24 * 60 * 60,
+        path="/",
+    )
+
+
+def _normalize_email(email: str) -> str:
+    normalized = email.lower().strip()
+    if "@" not in normalized or "." not in normalized.split("@")[-1]:
+        raise HTTPException(400, "Enter a valid email address")
+    return normalized
+
+
 # --- App setup ---
 
 app = FastAPI(
@@ -181,6 +245,163 @@ async def health():
     return {"status": "ok", "version": "0.1.0"}
 
 
+@app.get("/api/auth/me", response_model=AuthUserResponse)
+async def get_me(request: Request):
+    """Return current signed-in user."""
+    user = await get_current_user_optional(request)
+    if not user:
+        raise HTTPException(401, "Not authenticated")
+    return _serialize_user(user)
+
+
+@app.post("/api/auth/signup", response_model=AuthUserResponse)
+async def signup(payload: SignupRequest, response: Response):
+    """Create a local account and start a session."""
+    email = _normalize_email(payload.email)
+    existing = await find_user_by_email(email)
+    if existing:
+        raise HTTPException(400, "An account with this email already exists")
+
+    async with get_session() as session:
+        user = User(
+            email=email,
+            full_name=payload.full_name.strip(),
+            password_hash=hash_password(payload.password),
+        )
+        session.add(user)
+        await session.flush()
+
+    token, _ = await create_db_session(user)
+    _set_session_cookie(response, token)
+    return _serialize_user(user)
+
+
+@app.post("/api/auth/login", response_model=AuthUserResponse)
+async def login(payload: LoginRequest, response: Response):
+    """Authenticate with email and password."""
+    user = await find_user_by_email(_normalize_email(payload.email))
+    if not user or not user.password_hash or not verify_password(payload.password, user.password_hash):
+        raise HTTPException(401, "Invalid email or password")
+
+    token, _ = await create_db_session(user)
+    _set_session_cookie(response, token)
+    return _serialize_user(user)
+
+
+@app.post("/api/auth/logout", response_model=MessageResponse)
+async def logout(request: Request, response: Response):
+    """Destroy current session."""
+    await delete_session_by_token(request.cookies.get(SESSION_COOKIE_NAME))
+    response.delete_cookie(SESSION_COOKIE_NAME, path="/")
+    return MessageResponse(message="Signed out")
+
+
+@app.get("/api/auth/oauth/google/start")
+async def google_oauth_start(request: Request, next: Optional[str] = Query("/")):
+    """Start Google OAuth."""
+    if not settings.google_client_id or not settings.google_client_secret:
+        raise HTTPException(400, "Google OAuth is not configured")
+    state = f"{sanitize_next_path(next)}|{build_google_oauth_url.__name__}"
+    nonce = base64.urlsafe_b64encode(json.dumps({"state": state}).encode()).decode()
+    oauth_state = f"{sanitize_next_path(next)}|google|{nonce}"
+    redirect = RedirectResponse(build_google_oauth_url(request, oauth_state), status_code=302)
+    redirect.set_cookie(
+        OAUTH_STATE_COOKIE_NAME,
+        oauth_state,
+        httponly=True,
+        secure=False,
+        samesite="lax",
+        max_age=600,
+        path="/",
+    )
+    return redirect
+
+
+@app.get("/api/auth/oauth/linkedin/start")
+async def linkedin_oauth_start(request: Request, next: Optional[str] = Query("/")):
+    """Start LinkedIn OAuth."""
+    if not settings.linkedin_client_id or not settings.linkedin_client_secret:
+        raise HTTPException(400, "LinkedIn OAuth is not configured")
+    oauth_state = f"{sanitize_next_path(next)}|linkedin|{base64.urlsafe_b64encode(json.dumps({'n': next}).encode()).decode()}"
+    redirect = RedirectResponse(build_linkedin_oauth_url(request, oauth_state), status_code=302)
+    redirect.set_cookie(
+        OAUTH_STATE_COOKIE_NAME,
+        oauth_state,
+        httponly=True,
+        secure=False,
+        samesite="lax",
+        max_age=600,
+        path="/",
+    )
+    return redirect
+
+
+@app.get("/api/auth/oauth/google/callback")
+async def google_oauth_callback(
+    request: Request,
+    code: Optional[str] = Query(None),
+    state: Optional[str] = Query(None),
+    error: Optional[str] = Query(None),
+):
+    """Finish Google OAuth."""
+    return await _oauth_callback_common(
+        request=request,
+        provider="google",
+        code=code,
+        state=state,
+        error=error,
+    )
+
+
+@app.get("/api/auth/oauth/linkedin/callback")
+async def linkedin_oauth_callback(
+    request: Request,
+    code: Optional[str] = Query(None),
+    state: Optional[str] = Query(None),
+    error: Optional[str] = Query(None),
+):
+    """Finish LinkedIn OAuth."""
+    return await _oauth_callback_common(
+        request=request,
+        provider="linkedin",
+        code=code,
+        state=state,
+        error=error,
+    )
+
+
+async def _oauth_callback_common(
+    *,
+    request: Request,
+    provider: str,
+    code: Optional[str],
+    state: Optional[str],
+    error: Optional[str],
+) -> RedirectResponse:
+    cookie_state = request.cookies.get(OAUTH_STATE_COOKIE_NAME)
+    next_path = "/"
+    if cookie_state:
+        next_path = sanitize_next_path(cookie_state.split("|", 1)[0])
+    target_base = "google" if provider == "google" else "linkedin"
+    if error:
+        return RedirectResponse(
+            f"{settings.frontend_base_url}/login?error={error}",
+            status_code=302,
+        )
+    if not code or not state or not cookie_state or state != cookie_state or f"|{target_base}|" not in state:
+        return RedirectResponse(
+            f"{settings.frontend_base_url}/login?error=oauth_state_mismatch",
+            status_code=302,
+        )
+
+    user = await (complete_google_oauth(request, code) if provider == "google" else complete_linkedin_oauth(request, code))
+    token, _ = await create_db_session(user)
+    redirect = RedirectResponse(f"{settings.frontend_base_url}{next_path}", status_code=302)
+    _set_session_cookie(redirect, token)
+    redirect.delete_cookie(OAUTH_STATE_COOKIE_NAME, path="/")
+    return redirect
+
+
 # --- Jobs ---
 
 
@@ -191,6 +412,7 @@ async def list_jobs(
     min_score: Optional[float] = Query(None),
     limit: int = Query(50, le=200),
     offset: int = Query(0, ge=0),
+    current_user: User = Depends(require_current_user),
 ):
     """List all jobs with optional filters."""
     from sqlalchemy import select, desc
@@ -236,7 +458,7 @@ async def list_jobs(
 
 
 @app.get("/api/jobs/{job_id}", response_model=JobResponse)
-async def get_job(job_id: str):
+async def get_job(job_id: str, current_user: User = Depends(require_current_user)):
     """Get a single job with full details."""
     from sqlalchemy import select
 
@@ -267,7 +489,7 @@ async def get_job(job_id: str):
 
 
 @app.post("/api/discover", response_model=MessageResponse)
-async def discover_jobs(req: DiscoverRequest):
+async def discover_jobs(req: DiscoverRequest, current_user: User = Depends(require_current_user)):
     """Trigger job discovery."""
     try:
         jobs = await discovery_agent.execute(
@@ -285,7 +507,7 @@ async def discover_jobs(req: DiscoverRequest):
 
 
 @app.post("/api/analyze", response_model=MessageResponse)
-async def analyze_jobs(req: AnalyzeRequest):
+async def analyze_jobs(req: AnalyzeRequest, current_user: User = Depends(require_current_user)):
     """Analyze pending jobs using AI."""
     jobs = await discovery_agent.get_pending_jobs(req.limit)
 
@@ -304,7 +526,9 @@ async def analyze_jobs(req: AnalyzeRequest):
 
 
 @app.post("/api/prepare", response_model=MessageResponse)
-async def prepare_applications(req: PrepareRequest):
+async def prepare_applications(
+    req: PrepareRequest, current_user: User = Depends(require_current_user)
+):
     """Prepare applications (resume + cover letter) for matched jobs."""
     jobs = await logging_agent.search_jobs(
         status=JobStatus.MATCHED,
@@ -328,7 +552,7 @@ async def prepare_applications(req: PrepareRequest):
 
 
 @app.post("/api/apply", response_model=MessageResponse)
-async def submit_application(req: ApplyRequest):
+async def submit_application(req: ApplyRequest, current_user: User = Depends(require_current_user)):
     """Submit a prepared application."""
     from sqlalchemy import select
 
@@ -355,7 +579,9 @@ async def submit_application(req: ApplyRequest):
 
 
 @app.post("/api/approve/{application_id}", response_model=MessageResponse)
-async def approve_application(application_id: str):
+async def approve_application(
+    application_id: str, current_user: User = Depends(require_current_user)
+):
     """Approve an application for submission."""
     success = await application_agent.approve_application(application_id)
     if success:
@@ -371,6 +597,7 @@ async def tailor_resume_manual(
     job_description_file: Optional[UploadFile] = File(None),
     job_description_text: Optional[str] = Form(None),
     job_description_url: Optional[str] = Form(None),
+    current_user: User = Depends(require_current_user),
 ):
     """Tailor a provided resume for a given job description with support for files."""
     try:
@@ -471,7 +698,9 @@ async def tailor_resume_manual(
 
 
 @app.post("/api/export_resume_pdf")
-async def export_resume_pdf(req: ResumePdfExportRequest):
+async def export_resume_pdf(
+    req: ResumePdfExportRequest, current_user: User = Depends(require_current_user)
+):
     """Export a structured resume as a text-native PDF."""
     from hireflow.utils.resume_pdf import generate_resume_pdf_bytes
 
@@ -499,6 +728,7 @@ async def export_resume_pdf(req: ResumePdfExportRequest):
 async def list_applications(
     status: Optional[str] = Query(None),
     limit: int = Query(50, le=200),
+    current_user: User = Depends(require_current_user),
 ):
     """List all applications."""
     from sqlalchemy import select, desc
@@ -537,7 +767,7 @@ async def list_applications(
 
 
 @app.get("/api/pending", response_model=list[dict])
-async def pending_reviews():
+async def pending_reviews(current_user: User = Depends(require_current_user)):
     """Get applications pending human review."""
     return await logging_agent.get_pending_reviews()
 
@@ -546,7 +776,7 @@ async def pending_reviews():
 
 
 @app.get("/api/stats", response_model=StatsResponse)
-async def get_stats():
+async def get_stats(current_user: User = Depends(require_current_user)):
     """Get pipeline statistics."""
     stats = await logging_agent.execute()
     return stats

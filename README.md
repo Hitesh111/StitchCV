@@ -34,6 +34,27 @@ cp .env.example .env
 # Edit .env with your API keys
 ```
 
+For local auth, also set:
+
+```bash
+FRONTEND_BASE_URL=http://127.0.0.1:5173
+APP_BASE_URL=http://127.0.0.1:8000
+GOOGLE_CLIENT_ID=your_google_client_id
+GOOGLE_CLIENT_SECRET=your_google_client_secret
+```
+
+Google OAuth callback URL to register:
+
+```text
+http://127.0.0.1:8000/api/auth/oauth/google/callback
+```
+
+Frontend origin to allow in Google Cloud Console:
+
+```text
+http://127.0.0.1:5173
+```
+
 ### 3. Set Up Your Profile
 
 Edit the files in `data/`:

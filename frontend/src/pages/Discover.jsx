@@ -41,10 +41,24 @@ export default function Discover({ addToast }) {
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-            <div className="page-header page-hero page-hero-centered" style={{ width: '100%', maxWidth: 680, marginBottom: 40 }}>
-                <div className="page-kicker">Source discovery</div>
-                <h2 className="page-title">Discover</h2>
-                <p className="page-subtitle">Scrape new opportunities directly into your pipeline.</p>
+            <div className="hero-split app-hero discover-hero" style={{ width: '100%', marginBottom: 28 }}>
+                <div className="hero-split-copy">
+                    <div className="page-kicker">Source discovery</div>
+                    <h2 className="page-title hero-title">Discover jobs</h2>
+                    <p className="page-subtitle hero-subtitle">Run a search and pull opportunities into your pipeline.</p>
+                </div>
+                <div className="hero-preview-grid app-summary-grid">
+                    <div className="hero-preview-tile hero-preview-tile-accent">
+                        <span className="label-caps">Primary source</span>
+                        <strong>LinkedIn</strong>
+                        <p>Browser-backed scraping for richer role detail.</p>
+                    </div>
+                    <div className="hero-preview-tile">
+                        <span className="label-caps">Next step</span>
+                        <strong>Analyze and qualify</strong>
+                        <p>Send discoveries into the matching flow after scraping.</p>
+                    </div>
+                </div>
             </div>
 
             <div className="card" style={{ width: '100%', maxWidth: 500, marginBottom: 32 }}>
@@ -127,7 +141,7 @@ export default function Discover({ addToast }) {
                         {loading ? (
                             <><Loader2 size={16} className="spin-icon" /> Scraping {source}...</>
                         ) : (
-                            <><Rocket size={16} color="#1C1917" /> Start Discovery</>
+                            <><Rocket size={16} color="#1C1917" /> Start discovery</>
                         )}
                     </button>
                 </form>
@@ -149,7 +163,7 @@ export default function Discover({ addToast }) {
             )}
 
             {/* Tips block */}
-            <div className="tips-block" style={{ width: '100%', maxWidth: 500, marginBottom: 40 }}>
+            <div className="tips-block editorial-tips" style={{ width: '100%', maxWidth: 500, marginBottom: 40 }}>
                 <div className="tips-title">Discovery Tips</div>
                 <div className="tip-item"><span className="arrow">→</span> Be specific with titles to improve AI matching accuracy.</div>
                 <div className="tip-item"><span className="arrow">→</span> The scraper runs a real browser; it may ask you to log in to LinkedIn on the first run.</div>

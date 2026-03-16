@@ -1,8 +1,8 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Sun, Moon, Zap, LayoutDashboard, Search, Briefcase, ClipboardList, Wand2 } from 'lucide-react';
+import { Sun, Moon, Zap, LayoutDashboard, Search, Briefcase, ClipboardList, Wand2, LogOut, ArrowRight } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
-export default function Header() {
+export default function Header({ user, onLogout, publicMode = false }) {
     const location = useLocation();
     const [isDark, setIsDark] = useState(false);
 
@@ -27,7 +27,7 @@ export default function Header() {
     };
 
     const navLinks = [
-        { path: '/', label: 'Overview' },
+        { path: '/app', label: 'Overview' },
         { path: '/discover', label: 'Discover' },
         { path: '/jobs', label: 'Jobs' },
         { path: '/applications', label: 'Applications' },
@@ -36,43 +36,82 @@ export default function Header() {
 
     // Mobile bottom nav — 4 tabs + 1 primary (Tailor)
     const mobileNav = [
-        { path: '/', label: 'Home', icon: <LayoutDashboard size={18} /> },
+        { path: '/app', label: 'Home', icon: <LayoutDashboard size={18} /> },
         { path: '/jobs', label: 'Jobs', icon: <Briefcase size={18} /> },
         { path: '/tailor', label: 'Tailor', icon: <Wand2 size={20} />, primary: true },
         { path: '/discover', label: 'Discover', icon: <Search size={18} /> },
         { path: '/applications', label: 'Apply', icon: <ClipboardList size={18} /> },
     ];
 
-    const isActive = (path) => location.pathname === path;
+    const isActive = (path) => {
+        if (path === '/app') return location.pathname === '/app';
+        return location.pathname === path || location.pathname.startsWith(`${path}/`);
+    };
 
     return (
         <>
             <header className="header">
                 <div className="header-container">
                     {/* Logo Area */}
-                    <Link to="/" className="header-logo">
+                    <Link to={publicMode ? '/' : '/app'} className="header-logo">
                         <div className="header-logo-mark">
                             <Zap size={14} strokeWidth={3} />
                         </div>
-                        <span>HireFlow</span>
+                        <div className="header-logo-copy">
+                            <span>HireFlow</span>
+                            <small>AI job command center</small>
+                        </div>
                     </Link>
 
                     {/* Main Navigation (desktop only — hidden on mobile via CSS) */}
-                    <nav className="header-nav">
-                        {navLinks.map((link) => (
-                            <Link
-                                key={link.path}
-                                to={link.path}
-                                className={isActive(link.path) ? 'active' : ''}
-                            >
-                                {link.label}
-                            </Link>
-                        ))}
-                    </nav>
+                    {publicMode ? (
+                        <nav className="header-nav header-nav-public">
+                            <Link to="/">Product</Link>
+                            <Link to="/login">Login</Link>
+                            <Link to="/signup">Signup</Link>
+                        </nav>
+                    ) : (
+                        <nav className="header-nav">
+                            {navLinks.map((link) => (
+                                <Link
+                                    key={link.path}
+                                    to={link.path}
+                                    className={isActive(link.path) ? 'active' : ''}
+                                >
+                                    {link.label}
+                                </Link>
+                            ))}
+                        </nav>
+                    )}
 
                     {/* Right Controls */}
                     <div className="header-actions">
-                        <span className="version-string">v2.0.0</span>
+                        <span className="version-string">Studio v2.0.0</span>
+                        {publicMode && !user && (
+                            <Link className="btn btn-primary header-cta" to="/signup">
+                                Get started
+                                <ArrowRight size={14} />
+                            </Link>
+                        )}
+                        {publicMode && user && (
+                            <Link className="btn btn-primary header-cta" to="/app">
+                                Open workspace
+                                <ArrowRight size={14} />
+                            </Link>
+                        )}
+                        {user && (
+                            <div className="header-user-pill" title={user.email}>
+                                <span className="header-user-avatar">
+                                    {user.full_name?.slice(0, 1)?.toUpperCase() || user.email?.slice(0, 1)?.toUpperCase()}
+                                </span>
+                                <span className="header-user-name">{user.full_name || user.email}</span>
+                            </div>
+                        )}
+                        {user && (
+                            <button className="theme-toggle" onClick={onLogout} aria-label="Sign out">
+                                <LogOut size={14} strokeWidth={2.5} />
+                            </button>
+                        )}
                         <button className="theme-toggle" onClick={toggleTheme} aria-label="Toggle theme">
                             {isDark ? <Sun size={14} strokeWidth={2.5} /> : <Moon size={14} strokeWidth={2.5} />}
                         </button>
@@ -81,7 +120,7 @@ export default function Header() {
             </header>
 
             {/* Mobile Bottom Navigation (shown only on mobile via CSS) */}
-            <nav className="mobile-bottom-nav" role="navigation" aria-label="Mobile navigation">
+            {!publicMode && <nav className="mobile-bottom-nav" role="navigation" aria-label="Mobile navigation">
                 {mobileNav.map((item) => (
                     <Link
                         key={item.path}
@@ -92,7 +131,7 @@ export default function Header() {
                         <span>{item.label}</span>
                     </Link>
                 ))}
-            </nav>
+            </nav>}
         </>
     );
 }

@@ -3,6 +3,7 @@ const API_BASE = '/api';
 async function request(endpoint, options = {}) {
     const url = `${API_BASE}${endpoint}`;
     const config = {
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         ...options,
     };
@@ -11,7 +12,9 @@ async function request(endpoint, options = {}) {
 
     if (!response.ok) {
         const error = await response.json().catch(() => ({ detail: response.statusText }));
-        throw new Error(error.detail || `API error: ${response.status}`);
+        const err = new Error(error.detail || `API error: ${response.status}`);
+        err.status = response.status;
+        throw err;
     }
 
     return response.json();
@@ -20,6 +23,12 @@ async function request(endpoint, options = {}) {
 export const api = {
     // Health
     health: () => request('/health'),
+
+    // Auth
+    me: () => request('/auth/me'),
+    signup: (data) => request('/auth/signup', { method: 'POST', body: JSON.stringify(data) }),
+    login: (data) => request('/auth/login', { method: 'POST', body: JSON.stringify(data) }),
+    logout: () => request('/auth/logout', { method: 'POST' }),
 
     // Jobs
     getJobs: (params = {}) => {

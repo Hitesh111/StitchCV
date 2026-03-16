@@ -51,6 +51,16 @@ class Settings(BaseSettings):
     require_human_review: bool = Field(
         default=True, description="Require human review before submission"
     )
+    frontend_base_url: str = Field(
+        default="http://127.0.0.1:5173", description="Frontend base URL for auth redirects"
+    )
+    app_base_url: str = Field(
+        default="http://127.0.0.1:8000", description="Backend base URL for OAuth callbacks"
+    )
+    google_client_id: str = Field(default="", description="Google OAuth client id")
+    google_client_secret: str = Field(default="", description="Google OAuth client secret")
+    linkedin_client_id: str = Field(default="", description="LinkedIn OAuth client id")
+    linkedin_client_secret: str = Field(default="", description="LinkedIn OAuth client secret")
     default_work_authorization: str = Field(
         default="authorized", description="Default work authorization status"
     )

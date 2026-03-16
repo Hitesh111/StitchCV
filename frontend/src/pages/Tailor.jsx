@@ -183,17 +183,36 @@ export default function Tailor({ addToast }) {
 
     return (
         <div style={{ paddingBottom: 64 }}>
-            <div className="page-header page-hero page-hero-centered" style={{ marginBottom: 40 }}>
-                <div className="page-kicker">Resume studio</div>
-                <h2 className="page-title">Tailor Resume</h2>
-                <p className="page-subtitle">Map your master experiences to a specific JD below.</p>
+            <div className="hero-split app-hero tailor-hero" style={{ marginBottom: 24 }}>
+                <div className="hero-split-copy">
+                    <div className="page-kicker">Resume studio</div>
+                    <h2 className="page-title hero-title">Tailor resume</h2>
+                    <p className="page-subtitle hero-subtitle">Feed a master resume and job description into the tailoring workflow.</p>
+                </div>
+                <div className="hero-process-panel app-summary-grid">
+                    <div className="hero-process-card">
+                        <span className="label-caps">Input</span>
+                        <strong>Resume + JD</strong>
+                        <p>Upload files, paste text, or fetch the JD from a link.</p>
+                    </div>
+                    <div className="hero-process-card">
+                        <span className="label-caps">Output</span>
+                        <strong>Preview + PDF + JSON</strong>
+                        <p>Review the tailored result before exporting.</p>
+                    </div>
+                </div>
             </div>
 
-            {/* Top Row: Two Column Grid for inputs */}
-            <div className="input-grid">
+            <div className="showcase-panel app-panel" style={{ marginBottom: 32 }}>
+                <div className="showcase-panel-header">
+                    <div>
+                        <div className="label-caps">Studio workflow</div>
+                        <h3 className="showcase-panel-title">Inputs</h3>
+                    </div>
+                </div>
+                <div className="input-grid">
                 
-                {/* Left: Master Resume */}
-                <div className="card" style={{ display: 'flex', flexDirection: 'column' }}>
+                <div className="card feature-card-dark" style={{ display: 'flex', flexDirection: 'column' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
                         <div className="label-caps">1. Master Resume</div>
                         <div className="pill-group">
@@ -226,7 +245,7 @@ export default function Tailor({ addToast }) {
                 </div>
 
                 {/* Right: Job Description */}
-                <div className="card" style={{ display: 'flex', flexDirection: 'column' }}>
+                <div className="card feature-card-dark" style={{ display: 'flex', flexDirection: 'column' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
                         <div className="label-caps">2. Job Description</div>
                         <div className="pill-group">
@@ -292,6 +311,7 @@ export default function Tailor({ addToast }) {
                             </label>
                         )}
                     </div>
+                </div>
                 </div>
             </div>
 

@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Briefcase, FileText, Target, Activity, Zap } from 'lucide-react';
+import { Zap } from 'lucide-react';
 import api from '../services/api';
-import { NudgeBar, ST_COLORS, StatusIcon } from '../components/Shared';
+import { NudgeBar, ST_COLORS } from '../components/Shared';
 
 export default function Dashboard({ addToast }) {
     const navigate = useNavigate();
@@ -69,25 +69,47 @@ export default function Dashboard({ addToast }) {
 
     return (
         <div>
-            <div className="page-header page-hero" style={{ marginBottom: 24 }}>
-                <div className="page-kicker">Pipeline overview</div>
-                <div className="page-header-row">
-                    <div>
-                        <h2 className="page-title">Good morning, {userName} 👋</h2>
-                        <p className="page-subtitle">Here&apos;s your job hunt at a glance.</p>
-                    </div>
+            <div className="hero-split app-hero dashboard-hero" style={{ marginBottom: 24 }}>
+                <div className="hero-split-copy">
+                    <div className="page-kicker">Pipeline overview</div>
+                    <h2 className="page-title hero-title">Good morning, {userName}</h2>
+                    <p className="page-subtitle hero-subtitle">Discovery, matching, and application progress in one place.</p>
                     <div className="page-header-actions">
-                    <button className="btn btn-ghost" onClick={() => handleAction('prepare')} disabled={!!actionLoading}>
-                        {actionLoading === 'prepare' ? '📄 Preparing...' : '📄 Prepare Applications'}
-                    </button>
-                    <button className="btn btn-primary" onClick={() => handleAction('analyze')} disabled={!!actionLoading}>
-                        {actionLoading === 'analyze' ? '⚡ Analyzing...' : '⚡ Analyze Jobs'}
-                    </button>
+                        <button className="btn btn-ghost" onClick={() => handleAction('prepare')} disabled={!!actionLoading}>
+                            {actionLoading === 'prepare' ? 'Preparing applications...' : 'Prepare applications'}
+                        </button>
+                        <button className="btn btn-primary" onClick={() => handleAction('analyze')} disabled={!!actionLoading}>
+                            {actionLoading === 'analyze' ? 'Analyzing jobs...' : 'Analyze jobs'}
+                        </button>
+                    </div>
+                </div>
+                <div className="hero-mosaic compact-mosaic">
+                    <div className="hero-mosaic-card hero-mosaic-card-accent">
+                        <div className="label-caps">Matched jobs</div>
+                        <div className="hero-mosaic-value">{matchedJobs}</div>
+                        <div className="hero-mosaic-meta">ready for tailoring</div>
+                    </div>
+                    <div className="hero-mosaic-card">
+                        <div className="hero-mosaic-icon"><Zap size={16} /></div>
+                        <div className="hero-mosaic-text">Automated analysis, tailoring, and application preparation.</div>
+                    </div>
+                    <div className="hero-mosaic-card hero-mosaic-card-dark">
+                        <div className="label-caps">Pending review</div>
+                        <div className="hero-mosaic-inline">
+                            <span className="hero-mosaic-value small">{pendingApps}</span>
+                            <span className="hero-mosaic-meta">awaiting approval</span>
+                        </div>
+                    </div>
+                    <div className="hero-mosaic-card">
+                        <div className="label-caps">24h activity</div>
+                        <div className="hero-mosaic-inline">
+                            <span className="hero-mosaic-value small">{stats?.recent?.jobs_discovered_24h || 0}</span>
+                            <span className="hero-mosaic-meta">jobs in the last 24h</span>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            {/* Stats Grid */}
             <div className="stats-grid">
                 {topStats.map(({ label, value, sub, isHighlight }) => (
                     <div className={`card stat-card ${isHighlight ? 'highlight card-accent' : ''}`} key={label}>
@@ -98,60 +120,65 @@ export default function Dashboard({ addToast }) {
                 ))}
             </div>
 
-            {/* Pipeline Cards */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
-
-                {/* Jobs Pipeline */}
-                <div className="card">
-                    <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-                        <h3 className="card-title">Jobs Pipeline</h3>
-                        <span className="label-caps">{totalJobs} total</span>
-                    </div>
-
-                    <div style={{ display: 'flex', flexDirection: 'column' }}>
-                        {Object.entries(stats?.jobs || {}).map(([status, count]) => {
-                            const isMatched = status === 'matched';
-                            return (
-                                <div key={status} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 0', borderBottom: '1px solid var(--border)' }}>
-                                    <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: ST_COLORS[status] || '#A8A29E' }} />
-                                    <span style={{ fontSize: '13px', flex: 1, textTransform: 'capitalize', fontWeight: 600 }}>
-                                        {status.replace('_', ' ')}
-                                    </span>
-                                    {isMatched && count > 0 ? (
-                                        <span className="chip chip-yellow">{count}</span>
-                                    ) : (
-                                        <span className="chip chip-neutral">{count}</span>
-                                    )}
-                                </div>
-                            );
-                        })}
+            <div className="showcase-panel app-panel">
+                <div className="showcase-panel-header">
+                    <div>
+                        <div className="label-caps">Live pipelines</div>
+                        <h3 className="showcase-panel-title">Pipeline status</h3>
                     </div>
                 </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
 
-                {/* Applications Pipeline */}
-                <div className="card">
-                    <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-                        <h3 className="card-title">Applications</h3>
-                        <span className="label-caps">{totalApps} total</span>
+                    <div className="card feature-card-dark">
+                        <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                            <h3 className="card-title">Jobs Pipeline</h3>
+                            <span className="label-caps">{totalJobs} total</span>
+                        </div>
+
+                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                            {Object.entries(stats?.jobs || {}).map(([status, count]) => {
+                                const isMatched = status === 'matched';
+                                return (
+                                    <div key={status} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 0', borderBottom: '1px solid var(--border)' }}>
+                                        <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: ST_COLORS[status] || '#A8A29E' }} />
+                                        <span style={{ fontSize: '13px', flex: 1, textTransform: 'capitalize', fontWeight: 600 }}>
+                                            {status.replace('_', ' ')}
+                                        </span>
+                                        {isMatched && count > 0 ? (
+                                            <span className="chip chip-yellow">{count}</span>
+                                        ) : (
+                                            <span className="chip chip-neutral">{count}</span>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
                     </div>
 
-                    <div style={{ display: 'flex', flexDirection: 'column' }}>
-                        {Object.entries(stats?.applications || {}).map(([status, count]) => {
-                            const isActionable = status === 'pending_review' || status === 'draft';
-                            return (
-                                <div key={status} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 0', borderBottom: '1px solid var(--border)' }}>
-                                    <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: ST_COLORS[status] || '#A8A29E' }} />
-                                    <span style={{ fontSize: '13px', flex: 1, textTransform: 'capitalize', fontWeight: 600 }}>
-                                        {status.replace('_', ' ')}
-                                    </span>
-                                    {isActionable && count > 0 ? (
-                                        <span className="chip chip-yellow">{count}</span>
-                                    ) : (
-                                        <span className="chip chip-neutral">{count}</span>
-                                    )}
-                                </div>
-                            );
-                        })}
+                    <div className="card feature-card-dark">
+                        <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                            <h3 className="card-title">Applications</h3>
+                            <span className="label-caps">{totalApps} total</span>
+                        </div>
+
+                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                            {Object.entries(stats?.applications || {}).map(([status, count]) => {
+                                const isActionable = status === 'pending_review' || status === 'draft';
+                                return (
+                                    <div key={status} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 0', borderBottom: '1px solid var(--border)' }}>
+                                        <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: ST_COLORS[status] || '#A8A29E' }} />
+                                        <span style={{ fontSize: '13px', flex: 1, textTransform: 'capitalize', fontWeight: 600 }}>
+                                            {status.replace('_', ' ')}
+                                        </span>
+                                        {isActionable && count > 0 ? (
+                                            <span className="chip chip-yellow">{count}</span>
+                                        ) : (
+                                            <span className="chip chip-neutral">{count}</span>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
                     </div>
                 </div>
             </div>
