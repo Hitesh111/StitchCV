@@ -20,6 +20,78 @@ class LinkedInScraper(BaseScraper):
         self.base_url = "https://www.linkedin.com/jobs/search/"
         self.login_indicator = ".global-nav__me-photo"
 
+    async def _ensure_logged_in(self, page: Any) -> None:
+        """Wait for LinkedIn login when required."""
+        if await browser_service.is_logged_in(page, self.login_indicator):
+            return
+
+        self.logger.warning("Not logged into LinkedIn. Please log in manually.")
+        print("\n⚠️  Please log into LinkedIn in the browser window...")
+        await page.wait_for_selector(self.login_indicator, timeout=120000)
+        self.logger.info("Login detected, continuing...")
+
+    async def _extract_job_details_from_page(self, page: Any, fallback_url: str) -> Optional[dict[str, Any]]:
+        """Extract job details from whatever LinkedIn job page is currently loaded."""
+        title_selectors = [
+            ".jobs-unified-top-card__job-title",
+            ".job-details-jobs-unified-top-card__job-title",
+            "h1",
+        ]
+        company_selectors = [
+            ".jobs-unified-top-card__company-name",
+            ".job-details-jobs-unified-top-card__company-name",
+            "a[href*='/company/']",
+        ]
+        location_selectors = [
+            ".jobs-unified-top-card__bullet",
+            ".job-details-jobs-unified-top-card__primary-description-container span",
+        ]
+        description_selectors = [
+            ".jobs-description-content__text",
+            ".jobs-box__html-content",
+            ".jobs-description",
+            "[class*='jobs-description']",
+            "[class*='job-description']",
+        ]
+
+        async def first_text(selectors: list[str]) -> str:
+            for selector in selectors:
+                try:
+                    await page.wait_for_selector(selector, timeout=3000)
+                    element = await page.query_selector(selector)
+                    if element:
+                        text = (await element.inner_text()).strip()
+                        if text:
+                            return text
+                except Exception:
+                    continue
+            return ""
+
+        role = await first_text(title_selectors)
+        company = await first_text(company_selectors)
+        location = await first_text(location_selectors)
+        description = await first_text(description_selectors)
+
+        if not description:
+            try:
+                description = await page.locator(
+                    ".jobs-description-content__text, .jobs-box__html-content, .jobs-description"
+                ).first.inner_text(timeout=3000)
+                description = description.strip()
+            except Exception:
+                description = ""
+
+        if not description:
+            return None
+
+        return {
+            "company": company or "Unknown",
+            "role": role or "Unknown",
+            "location": location or "Unknown",
+            "job_description": description,
+            "apply_link": page.url or fallback_url,
+        }
+
     async def search_jobs(
         self,
         query: str,
@@ -51,13 +123,7 @@ class LinkedInScraper(BaseScraper):
             await page.goto(url)
             await browser_service.wait_for_navigation(page)
 
-            # Check if logged in
-            if not await browser_service.is_logged_in(page, self.login_indicator):
-                self.logger.warning("Not logged into LinkedIn. Please log in manually.")
-                # Wait for user to log in
-                print("\n⚠️  Please log into LinkedIn in the browser window...")
-                await page.wait_for_selector(self.login_indicator, timeout=120000)
-                self.logger.info("Login detected, continuing...")
+            await self._ensure_logged_in(page)
 
             # Wait for job cards to load
             job_card_selector = ".job-card-container"
@@ -156,31 +222,16 @@ class LinkedInScraper(BaseScraper):
         await self._wait_for_rate_limit()
 
         async with browser_service.new_page() as page:
-            await page.goto(job_url)
+            await page.goto(job_url, wait_until="domcontentloaded")
             await browser_service.wait_for_navigation(page)
+            await self._ensure_logged_in(page)
+            await browser_service.human_like_delay(500, 1200)
 
             try:
-                # Wait for content to load
-                await page.wait_for_selector(".jobs-unified-top-card", timeout=10000)
-
-                title_el = await page.query_selector(".jobs-unified-top-card__job-title")
-                company_el = await page.query_selector(".jobs-unified-top-card__company-name")
-                location_el = await page.query_selector(".jobs-unified-top-card__bullet")
-                desc_el = await page.query_selector(".jobs-description-content__text")
-
-                role = await title_el.inner_text() if title_el else "Unknown"
-                company = await company_el.inner_text() if company_el else "Unknown"
-                location = await location_el.inner_text() if location_el else "Unknown"
-                job_description = await desc_el.inner_text() if desc_el else ""
-
-                return {
-                    "company": company.strip(),
-                    "role": role.strip(),
-                    "location": location.strip(),
-                    "job_description": job_description.strip(),
-                    "apply_link": job_url,
-                }
-
+                details = await self._extract_job_details_from_page(page, job_url)
+                if details:
+                    return details
             except Exception as e:
                 self.logger.error(f"Failed to get job details: {e}")
-                return None
+
+            return None

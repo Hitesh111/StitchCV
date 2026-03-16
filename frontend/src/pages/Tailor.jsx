@@ -1,6 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Upload, FileText, Download, Check, Settings, X, Trash2 } from 'lucide-react';
-import html2pdf from 'html2pdf.js';
 import ResumeTemplate from '../components/ResumeTemplate';
 
 const STORAGE_KEY = 'hireflow_tailor_v1';
@@ -22,6 +21,8 @@ export default function Tailor({ addToast }) {
     const [jdInputMode, setJdInputMode] = useState(saved?.jdInputMode || 'text');
     const [jdFile, setJdFile] = useState(null);
     const [jdText, setJdText] = useState(saved?.jdText || '');
+    const [jdUrl, setJdUrl] = useState(saved?.jdUrl || '');
+    const [fetchedJd, setFetchedJd] = useState(saved?.fetchedJd || '');
 
     const [isLoading, setIsLoading] = useState(false);
     const [tailoredResume, setTailoredResume] = useState(saved?.tailoredResume || null);
@@ -37,9 +38,9 @@ export default function Tailor({ addToast }) {
 
     // Persist result state to localStorage whenever it changes
     useEffect(() => {
-        const snapshot = { resumeInputMode, resumeText, jdInputMode, jdText, tailoredResume, logs, inputScores, outputScores };
+        const snapshot = { resumeInputMode, resumeText, jdInputMode, jdText, jdUrl, fetchedJd, tailoredResume, logs, inputScores, outputScores };
         localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshot));
-    }, [resumeInputMode, resumeText, jdInputMode, jdText, tailoredResume, logs, inputScores, outputScores]);
+    }, [resumeInputMode, resumeText, jdInputMode, jdText, jdUrl, fetchedJd, tailoredResume, logs, inputScores, outputScores]);
 
     const handleClear = () => {
         setTailoredResume(null);
@@ -48,6 +49,8 @@ export default function Tailor({ addToast }) {
         setLogs([]);
         setResumeText('');
         setJdText('');
+        setJdUrl('');
+        setFetchedJd('');
         setResumeFile(null);
         setJdFile(null);
         localStorage.removeItem(STORAGE_KEY);
@@ -59,6 +62,7 @@ export default function Tailor({ addToast }) {
         if (resumeInputMode === 'text' && !resumeText.trim()) return addToast('Please paste your master resume text', 'error');
         if (jdInputMode === 'file' && !jdFile) return addToast('Please upload a job description file', 'error');
         if (jdInputMode === 'text' && !jdText.trim()) return addToast('Please paste a job description', 'error');
+        if (jdInputMode === 'url' && !jdUrl.trim()) return addToast('Please paste a job posting URL', 'error');
 
         setIsLoading(true);
         setHasChangedInputs(false);
@@ -66,6 +70,7 @@ export default function Tailor({ addToast }) {
         setInputScores(null);
         setOutputScores(null);
         setLogs([]);
+        setFetchedJd('');
 
         try {
             const formData = new FormData();
@@ -73,6 +78,7 @@ export default function Tailor({ addToast }) {
             else formData.append('master_resume_text', resumeText);
 
             if (jdInputMode === 'file') formData.append('job_description_file', jdFile);
+            else if (jdInputMode === 'url') formData.append('job_description_url', jdUrl.trim());
             else formData.append('job_description_text', jdText);
 
             const response = await fetch('/api/tailor_resume', { method: 'POST', body: formData });
@@ -100,6 +106,11 @@ export default function Tailor({ addToast }) {
                         let dataStr = dataMatch[1].trim();
                         if (event === "log") {
                             setLogs(prev => [...prev, dataStr.replace(/\\n/g, '\n')]);
+                        } else if (event === "jd_preview") {
+                            try {
+                                const parsed = JSON.parse(atob(dataStr));
+                                if (parsed.job_description) setFetchedJd(parsed.job_description);
+                            } catch (e) { console.error("JD preview parse fail", e); }
                         } else if (event === "result") {
                             try {
                                 const parsed = JSON.parse(atob(dataStr));
@@ -120,22 +131,48 @@ export default function Tailor({ addToast }) {
     };
 
     const handleDownload = () => {
-        if (!tailoredResume || !pdfRef.current) return;
+        if (!tailoredResume) return;
         addToast('Generating PDF...');
-        const opt = {
-            margin: 0,
-            filename: 'tailored_resume.pdf',
-            image: { type: 'jpeg', quality: 0.98 },
-            html2canvas: { scale: 2, useCORS: true, logging: false },
-            jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
-        };
-        html2pdf().set(opt).from(pdfRef.current).save().then(() => {
-            addToast('Downloaded successfully!', 'success');
-        });
+        fetch('/api/export_resume_pdf', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ resume: tailoredResume, filename: 'tailored_resume.pdf' }),
+        })
+            .then(async (response) => {
+                if (!response.ok) {
+                    const error = await response.json().catch(() => ({ detail: 'PDF export failed' }));
+                    throw new Error(error.detail || 'PDF export failed');
+                }
+                return response.blob();
+            })
+            .then((blob) => {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'tailored_resume.pdf';
+                a.click();
+                URL.revokeObjectURL(url);
+                addToast('Downloaded successfully!', 'success');
+            })
+            .catch((error) => {
+                addToast(error.message, 'error');
+            });
+    };
+
+    const handleDownloadJson = () => {
+        if (!tailoredResume) return;
+        const blob = new Blob([JSON.stringify(tailoredResume, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'tailored_resume.json';
+        a.click();
+        URL.revokeObjectURL(url);
+        addToast('JSON downloaded successfully!', 'success');
     };
 
     const isReady = (resumeInputMode === 'file' ? !!resumeFile : !!resumeText.trim()) &&
-                    (jdInputMode === 'file' ? !!jdFile : !!jdText.trim());
+                    (jdInputMode === 'file' ? !!jdFile : jdInputMode === 'url' ? !!jdUrl.trim() : !!jdText.trim());
 
     // Allow re-generate any time a result exists and user has changed inputs
     const canGenerate = isReady || (!!tailoredResume && hasChangedInputs);
@@ -146,7 +183,8 @@ export default function Tailor({ addToast }) {
 
     return (
         <div style={{ paddingBottom: 64 }}>
-            <div className="page-header" style={{ textAlign: 'center', marginBottom: 40 }}>
+            <div className="page-header page-hero page-hero-centered" style={{ marginBottom: 40 }}>
+                <div className="page-kicker">Resume studio</div>
                 <h2 className="page-title">Tailor Resume</h2>
                 <p className="page-subtitle">Map your master experiences to a specific JD below.</p>
             </div>
@@ -193,6 +231,7 @@ export default function Tailor({ addToast }) {
                         <div className="label-caps">2. Job Description</div>
                         <div className="pill-group">
                             <button className={`pill-tab ${jdInputMode === 'text' ? 'active' : ''}`} onClick={() => { setJdInputMode('text'); markChanged(); }}>Text</button>
+                            <button className={`pill-tab ${jdInputMode === 'url' ? 'active' : ''}`} onClick={() => { setJdInputMode('url'); markChanged(); }}>Link</button>
                             <button className={`pill-tab ${jdInputMode === 'file' ? 'active' : ''}`} onClick={() => { setJdInputMode('file'); markChanged(); }}>File</button>
                         </div>
                     </div>
@@ -202,6 +241,38 @@ export default function Tailor({ addToast }) {
                             <div style={{ position: 'relative', flex: 1, display: 'flex', flexDirection: 'column' }}>
                                 <textarea className="form-textarea jd-textarea" style={{ flex: 1, minHeight: 200 }} placeholder="Paste the Job Description..." value={jdText} onChange={e => { setJdText(e.target.value); markChanged(); }} />
                                 <div style={{ position: 'absolute', bottom: 12, right: 12, fontSize: 10, color: 'var(--text-muted)' }}>{jdText.length} chars</div>
+                            </div>
+                        ) : jdInputMode === 'url' ? (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, flex: 1 }}>
+                                <input
+                                    type="url"
+                                    className="form-input"
+                                    placeholder="Paste a job posting URL..."
+                                    value={jdUrl}
+                                    onChange={e => { setJdUrl(e.target.value); markChanged(); }}
+                                />
+                                <div className="tips-block" style={{ padding: 14 }}>
+                                    <div className="tips-title" style={{ marginBottom: 8 }}>How it works</div>
+                                    <div className="tip-item"><span className="arrow">→</span> HireFlow fetches the page and extracts the JD automatically.</div>
+                                    <div className="tip-item"><span className="arrow">→</span> If the site is heavily rendered, it falls back to the browser session.</div>
+                                    <div className="tip-item"><span className="arrow">→</span> LinkedIn links work if a specific job is already selected on the page.</div>
+                                    <div className="tip-item"><span className="arrow">→</span> Logged-in pages like LinkedIn work best if your session is already active.</div>
+                                </div>
+                                {fetchedJd && (
+                                    <div className="tips-block" style={{ padding: 14 }}>
+                                        <div className="tips-title" style={{ marginBottom: 8 }}>Fetched JD Preview</div>
+                                        <div style={{
+                                            fontSize: 12.5,
+                                            lineHeight: 1.65,
+                                            color: 'var(--text-secondary)',
+                                            whiteSpace: 'pre-wrap',
+                                            maxHeight: 220,
+                                            overflowY: 'auto'
+                                        }}>
+                                            {fetchedJd}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         ) : (
                             <label className={`upload-zone ${jdFile ? 'loaded' : ''}`} style={{ flex: 1 }}>
@@ -262,6 +333,12 @@ export default function Tailor({ addToast }) {
                             {tailoredResume && (
                                 <button className="btn btn-ghost btn-sm" onClick={handleClear} title="Clear and start fresh">
                                     <Trash2 size={14} /> Clear
+                                </button>
+                            )}
+                            {tailoredResume && (
+                                <button className="btn btn-outline btn-sm" onClick={handleDownloadJson}>
+                                    <FileText size={14} />
+                                    Download JSON
                                 </button>
                             )}
                             {tailoredResume && (
@@ -361,10 +438,9 @@ export default function Tailor({ addToast }) {
                                     padding: 'var(--space-4)'
                                 }}>
                                     <div style={{
-                                        minWidth: '650px', // Prevent the resume from getting too narrow for fonts/layout
-                                        maxWidth: '850px',
+                                        minWidth: '816px',
+                                        maxWidth: '816px',
                                         margin: '0 auto',
-                                        aspectRatio: '8.5 / 11',
                                         backgroundColor: '#fff',
                                         boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
                                         borderRadius: '4px'

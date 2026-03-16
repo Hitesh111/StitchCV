@@ -57,14 +57,19 @@ export default function Applications({ addToast }) {
 
     return (
         <div>
-            <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <div>
-                    <h2 className="page-title">Applications</h2>
-                    <p className="page-subtitle">Track and manage your submitted applications.</p>
+            <div className="page-header page-hero" style={{ marginBottom: 24 }}>
+                <div className="page-kicker">Application tracker</div>
+                <div className="page-header-row">
+                    <div>
+                        <h2 className="page-title">Applications</h2>
+                        <p className="page-subtitle">Track and manage your submitted applications.</p>
+                    </div>
+                    <div className="page-header-actions">
+                        <button className="btn btn-ghost" onClick={loadApplications}>
+                            Refresh List
+                        </button>
+                    </div>
                 </div>
-                <button className="btn btn-ghost" onClick={loadApplications}>
-                    Refresh List
-                </button>
             </div>
 
             <div className="actions-bar" style={{ marginBottom: 32 }}>

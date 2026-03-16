@@ -3,11 +3,13 @@ from __future__ import annotations
 """FastAPI REST API for HireFlow."""
 
 import asyncio
+import base64
+import json
 from typing import Any, Optional
 
 import structlog
 from fastapi import FastAPI, HTTPException, Depends, UploadFile, File, Form, Query
-from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi.responses import JSONResponse, StreamingResponse, Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -64,6 +66,11 @@ class ApproveRequest(BaseModel):
 class TailorResumeRequest(BaseModel):
     master_resume: dict
     job_description: str
+
+
+class ResumePdfExportRequest(BaseModel):
+    resume: dict
+    filename: Optional[str] = "tailored_resume.pdf"
 
 
 class JobResponse(BaseModel):
@@ -363,6 +370,7 @@ async def tailor_resume_manual(
     master_resume_text: Optional[str] = Form(None),
     job_description_file: Optional[UploadFile] = File(None),
     job_description_text: Optional[str] = Form(None),
+    job_description_url: Optional[str] = Form(None),
 ):
     """Tailor a provided resume for a given job description with support for files."""
     try:
@@ -370,11 +378,14 @@ async def tailor_resume_manual(
             run_resume_tailor_graph,
             parse_resume_to_json,
         )
-        from hireflow.utils.document_parser import extract_text_from_pdf, extract_text_from_docx
-        import json
-
+        from hireflow.utils.document_parser import (
+            extract_text_from_pdf,
+            extract_text_from_docx,
+            extract_job_description_from_url,
+        )
         # 1. Process Job Description
         jd_content = ""
+        jd_from_url = False
         if job_description_file:
             content = await job_description_file.read()
             filename = job_description_file.filename.lower()
@@ -386,6 +397,9 @@ async def tailor_resume_manual(
                 jd_content = content.decode("utf-8")
         elif job_description_text:
             jd_content = job_description_text
+        elif job_description_url:
+            jd_from_url = True
+            jd_content = await extract_job_description_from_url(job_description_url.strip())
 
         if not jd_content.strip():
             raise HTTPException(400, "Job description is empty")
@@ -436,14 +450,46 @@ async def tailor_resume_manual(
         # 4. Execute LangGraph Workflow as a Server-Sent Events stream
         # Since run_resume_tailor_graph is now an async generator yielding string chunks
 
-        return StreamingResponse(
-            run_resume_tailor_graph(jd_content, resume_id, master_resume_json), media_type="text/event-stream"
-        )
+        async def stream_tailor_response():
+            if jd_from_url:
+                payload = base64.b64encode(
+                    json.dumps({"job_description": jd_content}).encode()
+                ).decode()
+                yield f"event: jd_preview\ndata: {payload}\n\n"
+
+            async for chunk in run_resume_tailor_graph(jd_content, resume_id, master_resume_json):
+                yield chunk
+
+        return StreamingResponse(stream_tailor_response(), media_type="text/event-stream")
     except HTTPException:
         raise
+    except ValueError as e:
+        raise HTTPException(400, str(e))
     except Exception as e:
         logger.error(f"Manual resume tailoring failed: {e}")
         raise HTTPException(500, f"Tailoring failed: {str(e)}")
+
+
+@app.post("/api/export_resume_pdf")
+async def export_resume_pdf(req: ResumePdfExportRequest):
+    """Export a structured resume as a text-native PDF."""
+    from hireflow.utils.resume_pdf import generate_resume_pdf_bytes
+
+    try:
+        pdf_bytes = generate_resume_pdf_bytes(req.resume)
+    except Exception as e:
+        logger.error(f"PDF export failed: {e}")
+        raise HTTPException(500, f"PDF export failed: {str(e)}")
+
+    filename = (req.filename or "tailored_resume.pdf").strip() or "tailored_resume.pdf"
+    if not filename.lower().endswith(".pdf"):
+        filename += ".pdf"
+
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 # --- Applications ---

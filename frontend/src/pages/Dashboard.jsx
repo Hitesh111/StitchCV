@@ -69,25 +69,28 @@ export default function Dashboard({ addToast }) {
 
     return (
         <div>
-            <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <div>
-                    <h2 className="page-title">Good morning, {userName} 👋</h2>
-                    <p className="page-subtitle">Here's your job hunt at a glance.</p>
-                </div>
-                <div style={{ display: 'flex', gap: '8px' }}>
+            <div className="page-header page-hero" style={{ marginBottom: 24 }}>
+                <div className="page-kicker">Pipeline overview</div>
+                <div className="page-header-row">
+                    <div>
+                        <h2 className="page-title">Good morning, {userName} 👋</h2>
+                        <p className="page-subtitle">Here&apos;s your job hunt at a glance.</p>
+                    </div>
+                    <div className="page-header-actions">
                     <button className="btn btn-ghost" onClick={() => handleAction('prepare')} disabled={!!actionLoading}>
                         {actionLoading === 'prepare' ? '📄 Preparing...' : '📄 Prepare Applications'}
                     </button>
                     <button className="btn btn-primary" onClick={() => handleAction('analyze')} disabled={!!actionLoading}>
                         {actionLoading === 'analyze' ? '⚡ Analyzing...' : '⚡ Analyze Jobs'}
                     </button>
+                    </div>
                 </div>
             </div>
 
             {/* Stats Grid */}
             <div className="stats-grid">
                 {topStats.map(({ label, value, sub, isHighlight }) => (
-                    <div className={`card stat-card ${isHighlight ? 'highlight' : ''}`} key={label} style={isHighlight ? { backgroundColor: 'var(--yellow-muted)', borderColor: 'var(--yellow-border)' } : {}}>
+                    <div className={`card stat-card ${isHighlight ? 'highlight card-accent' : ''}`} key={label}>
                         <div className="label-caps" style={isHighlight ? { color: 'var(--yellow-dark)' } : {}}>{label}</div>
                         <div className="stat-val-large" style={isHighlight ? { color: 'var(--yellow-dark)' } : {}}>{value}</div>
                         <div style={{ fontSize: '10.5px', color: isHighlight ? 'var(--yellow-dark)' : 'var(--text-muted)', marginTop: '4px', opacity: 0.8 }}>{sub}</div>

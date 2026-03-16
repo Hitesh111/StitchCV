@@ -1,6 +1,7 @@
 from typing import Dict, Any, List, TypedDict
 import base64
 import json
+import re
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_groq import ChatGroq
@@ -18,7 +19,6 @@ class ResumeTailorState(TypedDict):
     jd_analysis: Dict[str, Any]
     retrieved_content: str
     tailored_resume: str
-    input_scores: Dict[str, Any]
     input_scores: Dict[str, Any]
     output_scores: Dict[str, Any]
 
@@ -197,75 +197,197 @@ CRITICAL INSTRUCTIONS TO PREVENT DATA LOSS:
         
     return {"tailored_resume": tailored}
 
+STOPWORDS = {
+    "the", "and", "for", "with", "from", "that", "this", "your", "into", "will", "have", "has",
+    "are", "our", "you", "job", "role", "team", "years", "year", "plus", "more", "than", "not",
+    "all", "but", "can", "its", "their", "them", "about", "build", "building", "using", "used",
+    "strong", "excellent", "good", "best", "work", "working", "experience", "services", "service",
+    "software", "engineering", "engineer", "developer", "develop", "applications", "application",
+    "large", "scale", "system", "systems", "backend", "senior", "sde", "ability", "skills",
+    "written", "verbal", "communication", "passion", "problems", "complex", "general",
+}
+
+
+def _normalize_text(value: Any) -> str:
+    return str(value or "").lower()
+
+
+def _tokenize(text: str) -> set[str]:
+    return {
+        token for token in re.findall(r"[a-z0-9][a-z0-9\+\#\./-]{1,}", _normalize_text(text))
+        if token not in STOPWORDS
+    }
+
+
+def _extract_keyword_phrases(job_description: str, jd_analysis: dict[str, Any]) -> list[str]:
+    phrases: list[str] = []
+    seen = set()
+
+    for key in ("must_have_keywords", "key_skills"):
+        for item in jd_analysis.get(key, []) or []:
+            phrase = str(item).strip().lower()
+            if phrase and phrase not in seen:
+                seen.add(phrase)
+                phrases.append(phrase)
+
+    skill_patterns = [
+        r"\bnode\.?js\b",
+        r"\bmongodb\b",
+        r"\bgoogle cloud\b",
+        r"\bgcp\b",
+        r"\baws\b",
+        r"\bci/cd\b",
+        r"\bredis\b",
+        r"\brabbitmq\b",
+        r"\bmicroservices?\b",
+        r"\bdistributed systems?\b",
+        r"\bdesign patterns?\b",
+        r"\bperformance monitoring\b",
+        r"\bkubernetes\b",
+        r"\bdocker\b",
+        r"\btypescript\b",
+        r"\bjavascript\b",
+    ]
+    jd_lower = _normalize_text(job_description)
+    for pattern in skill_patterns:
+        match = re.search(pattern, jd_lower)
+        if match:
+            phrase = match.group(0).strip().lower()
+            if phrase not in seen:
+                seen.add(phrase)
+                phrases.append(phrase)
+
+    return phrases
+
+
+def _resume_text(resume: dict[str, Any]) -> str:
+    parts: list[str] = []
+    parts.append(_normalize_text(resume.get("summary", "")))
+    parts.extend(_normalize_text(skill) for skill in resume.get("skills", []) or [])
+
+    for section in ("experience", "projects", "education"):
+        for item in resume.get(section, []) or []:
+            for key, value in item.items():
+                if isinstance(value, list):
+                    parts.extend(_normalize_text(v) for v in value)
+                else:
+                    parts.append(_normalize_text(value))
+
+    return "\n".join(part for part in parts if part)
+
+
+def _extract_years(text: str) -> int:
+    values = [int(value) for value in re.findall(r"(\d+)\s*\+?\s*(?:years?|yrs?)", text.lower())]
+    return max(values) if values else 0
+
+
+def _score_jd_match(resume: dict[str, Any], job_description: str, jd_analysis: dict[str, Any]) -> int:
+    phrases = _extract_keyword_phrases(job_description, jd_analysis)
+    if not phrases:
+        return 0
+
+    resume_blob = _resume_text(resume)
+    matched = sum(1 for phrase in phrases if phrase in resume_blob)
+    return round((matched / len(phrases)) * 100)
+
+
+def _score_skills_coverage(resume: dict[str, Any], job_description: str, jd_analysis: dict[str, Any]) -> int:
+    required = _extract_keyword_phrases(job_description, jd_analysis)
+    if not required:
+        return 0
+
+    resume_skills = {_normalize_text(skill) for skill in resume.get("skills", []) or []}
+    resume_blob = _resume_text(resume)
+    covered = 0
+    for phrase in required:
+        phrase_tokens = _tokenize(phrase)
+        if phrase in resume_skills or phrase in resume_blob:
+            covered += 1
+        elif phrase_tokens and phrase_tokens.issubset(_tokenize(resume_blob)):
+            covered += 1
+
+    return round((covered / len(required)) * 100)
+
+
+def _score_experience_relevance(resume: dict[str, Any], job_description: str, jd_analysis: dict[str, Any]) -> int:
+    resume_blob = _resume_text(resume)
+    keyword_score = _score_jd_match(resume, job_description, jd_analysis)
+
+    jd_years = _extract_years(job_description)
+    resume_years = _extract_years(resume_blob)
+    if jd_years <= 0:
+        years_score = 70
+    elif resume_years >= jd_years:
+        years_score = 100
+    else:
+        years_score = max(0, round((resume_years / jd_years) * 100))
+
+    title_keywords = {"engineer", "developer", "backend", "software", "senior", "lead", "architect"}
+    titles = " ".join(_normalize_text(exp.get("title", "")) for exp in resume.get("experience", []) or [])
+    title_overlap = len(_tokenize(titles) & title_keywords)
+    title_score = min(100, 40 + title_overlap * 15) if titles else 20
+
+    return round(keyword_score * 0.45 + years_score * 0.35 + title_score * 0.20)
+
+
+def _score_ats_formatting(resume: dict[str, Any]) -> int:
+    score = 0
+
+    personal_info = resume.get("personal_info", {}) or {}
+    if personal_info.get("name"):
+        score += 10
+    if personal_info.get("email"):
+        score += 10
+    if personal_info.get("phone"):
+        score += 10
+    if resume.get("summary"):
+        score += 10
+    if resume.get("skills"):
+        score += 15
+    if resume.get("experience"):
+        score += 20
+    if resume.get("education"):
+        score += 10
+
+    experiences = resume.get("experience", []) or []
+    bullets = sum(len(exp.get("description", []) or []) for exp in experiences)
+    if bullets >= 4:
+        score += 10
+
+    structured_entries = 0
+    for exp in experiences:
+        if exp.get("title") and exp.get("company") and exp.get("date"):
+            structured_entries += 1
+    if experiences:
+        score += round((structured_entries / len(experiences)) * 15)
+
+    return min(100, score)
+
+
+def _compute_resume_scores(resume: dict[str, Any], job_description: str, jd_analysis: dict[str, Any]) -> dict[str, int]:
+    return {
+        "jd_match": _score_jd_match(resume, job_description, jd_analysis),
+        "skills_coverage": _score_skills_coverage(resume, job_description, jd_analysis),
+        "experience_relevance": _score_experience_relevance(resume, job_description, jd_analysis),
+        "ats_formatting": _score_ats_formatting(resume),
+    }
+
+
 async def score_resumes(state: ResumeTailorState):
-    """Score both the original and tailored resume against the JD."""
-    llm = _get_fallback_llm(temperature=0.0, max_retries=1)
-
-    jd_analysis_str = json.dumps(state['jd_analysis'], indent=2)
-    original_resume_str = json.dumps(state.get('master_resume_json', {}), indent=2)
-    tailored_resume_str = state.get('tailored_resume', '{}')
-
-    score_schema = '''{
-  "input_scores": {
-    "jd_match": 55,
-    "skills_coverage": 60,
-    "experience_relevance": 58,
-    "ats_formatting": 65
-  },
-  "output_scores": {
-    "jd_match": 88,
-    "skills_coverage": 92,
-    "experience_relevance": 85,
-    "ats_formatting": 95
-  }
-}'''
-
-    prompt = f"""You are an expert ATS (Applicant Tracking System) and resume analyst.
-
-JOB DESCRIPTION REQUIREMENTS:
-{jd_analysis_str}
-
-Full Job Description: {state['job_description'][:1000]}
-
-ORIGINAL RESUME (input):
-{original_resume_str}
-
-TAILORED RESUME (output):
-{tailored_resume_str}
-
-Score BOTH resumes against the Job Description on a scale of 0-100 for each metric:
-
-- jd_match: What % of the JD's required keywords and responsibilities does this resume address?
-- skills_coverage: What % of explicitly required skills listed in the JD are present in this resume?
-- experience_relevance: How directly relevant is the overall work experience to this specific role? (0-100)
-- ats_formatting: How clean and ATS-parseable is the resume? (structured sections, no tables/graphics = higher score)
-
-The output resume is specifically tailored so its scores should generally be higher.
-Return ONLY valid JSON matching this exact structure:
-{score_schema}
-
-All scores must be integers between 0 and 100. Be realistic and objective.
-"""
-
-    system_msg = SystemMessage(content="You are an ATS scoring engine. Always return valid JSON only. No markdown code blocks.")
-    human_msg = HumanMessage(content=prompt)
-
-    response = await llm.ainvoke([system_msg, human_msg])
-    content = response.content.strip()
-    if content.startswith("```json"):
-        content = content[7:-3].strip()
-    elif content.startswith("```"):
-        content = content[3:-3].strip()
-
+    """Score both the original and tailored resume deterministically against the JD."""
+    original_resume = state.get("master_resume_json", {}) or {}
     try:
-        scores = json.loads(content)
-        return {
-            "input_scores": scores.get("input_scores", {}),
-            "output_scores": scores.get("output_scores", {})
-        }
+        tailored_resume = json.loads(state.get("tailored_resume", "{}"))
     except json.JSONDecodeError:
-        default = {"jd_match": 0, "skills_coverage": 0, "experience_relevance": 0, "ats_formatting": 0}
-        return {"input_scores": default, "output_scores": default}
+        tailored_resume = {}
+
+    jd_analysis = state.get("jd_analysis", {}) or {}
+    job_description = state.get("job_description", "")
+
+    return {
+        "input_scores": _compute_resume_scores(original_resume, job_description, jd_analysis),
+        "output_scores": _compute_resume_scores(tailored_resume, job_description, jd_analysis),
+    }
 
 # Build the Graph
 workflow = StateGraph(ResumeTailorState)

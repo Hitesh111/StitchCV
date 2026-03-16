@@ -39,7 +39,8 @@ export default function Jobs({ addToast }) {
 
     return (
         <div>
-            <div className="page-header">
+            <div className="page-header page-hero" style={{ marginBottom: 24 }}>
+                <div className="page-kicker">Opportunity board</div>
                 <h2 className="page-title">Jobs</h2>
                 <p className="page-subtitle">Discovered opportunities from the web.</p>
             </div>

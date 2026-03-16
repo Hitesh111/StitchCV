@@ -1,11 +1,8 @@
 import React from 'react';
 
-/**
- * Parses inline markdown: **bold**, *italic*, removes standalone asterisks
- * Returns an array of React elements.
- */
 function renderInlineMarkdown(text) {
     if (!text) return null;
+
     const parts = [];
     const regex = /\*\*(.+?)\*\*|\*(.+?)\*/g;
     let lastIndex = 0;
@@ -15,11 +12,17 @@ function renderInlineMarkdown(text) {
         if (match.index > lastIndex) {
             parts.push(text.slice(lastIndex, match.index));
         }
+
         if (match[1] !== undefined) {
-            parts.push(<strong key={match.index} style={{ fontWeight: 700, color: '#1C1917' }}>{match[1]}</strong>);
+            parts.push(
+                <strong key={match.index} style={{ fontWeight: 700 }}>
+                    {match[1]}
+                </strong>
+            );
         } else if (match[2] !== undefined) {
             parts.push(<em key={match.index}>{match[2]}</em>);
         }
+
         lastIndex = regex.lastIndex;
     }
 
@@ -30,17 +33,31 @@ function renderInlineMarkdown(text) {
     return parts.length > 0 ? parts : text;
 }
 
-const SECTION_STYLE = { marginBottom: '20px' };
-const SECTION_HEADING = {
-    fontFamily: "'Inter', sans-serif",
+const rootStyle = {
+    width: '8.5in',
+    minHeight: '11in',
+    padding: '0.48in 0.58in',
+    background: '#FFFFFF',
+    color: '#171717',
+    fontFamily: '"Helvetica Neue", Arial, sans-serif',
     fontSize: '11px',
-    fontWeight: '800',
-    color: '#A8A29E', // text-muted
-    textTransform: 'uppercase',
-    letterSpacing: '0.08em',
-    borderBottom: '1px solid #E7E5E4',
-    paddingBottom: '6px',
+    lineHeight: 1.32,
+    boxSizing: 'border-box',
+};
+
+const sectionHeadingStyle = {
+    fontSize: '11.5px',
+    fontWeight: 700,
+    margin: '0 0 8px 0',
+    paddingBottom: '4px',
+    borderBottom: '1px solid #CFCFCF',
+    letterSpacing: '0.01em',
+};
+
+const sectionStyle = {
     marginBottom: '12px',
+    breakInside: 'avoid',
+    pageBreakInside: 'avoid',
 };
 
 const ResumeTemplate = React.forwardRef(({ data }, ref) => {
@@ -55,146 +72,184 @@ const ResumeTemplate = React.forwardRef(({ data }, ref) => {
         projects = [],
     } = data;
 
+    const contactItems = [
+        personal_info.email,
+        personal_info.phone,
+        personal_info.location,
+        ...(personal_info.links || []),
+    ].filter(Boolean);
+
     return (
-        <div
-            ref={ref}
-            style={{
-                fontFamily: "'Inter', sans-serif",
-                color: '#1C1917',
-                padding: '48px 56px',
-                background: '#FFFFFF', // Pure white back per spec
-                margin: '0 auto',
-                lineHeight: '1.5',
-                fontSize: '13px', // Base size
-                boxSizing: 'border-box'
-            }}
-        >
-            {/* ── Header ── */}
-            <header style={{ marginBottom: '32px' }}>
-                <h1 style={{
-                    fontSize: '17px',
-                    fontWeight: '800',
-                    color: '#1C1917',
-                    margin: '0 0 4px 0',
-                    letterSpacing: '-1px',
-                    lineHeight: '1.1'
-                }}>
+        <div ref={ref} style={rootStyle}>
+            <header style={{ marginBottom: '12px' }}>
+                <h1
+                    style={{
+                        margin: 0,
+                        fontSize: '23px',
+                        fontWeight: 700,
+                        letterSpacing: '0.01em',
+                    }}
+                >
                     {personal_info.name || 'Candidate Name'}
                 </h1>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', fontSize: '12px', color: '#78716C', fontWeight: 600 }}>
-                    {personal_info.email && (
-                        <span>{personal_info.email}</span>
-                    )}
-                    {personal_info.phone && (
-                        <>
-                            <span style={{ color: '#E7E5E4' }}>•</span>
-                            <span>{personal_info.phone}</span>
-                        </>
-                    )}
-                    {personal_info.links && personal_info.links.filter(Boolean).map((link, idx) => {
-                        const cleanLink = link.replace(/^https?:\/\/(www\.)?/, '');
-                        return (
-                        <React.Fragment key={idx}>
-                            <span style={{ color: '#E7E5E4' }}>•</span>
-                            <a
-                                href={link.startsWith('http') ? link : `https://${link}`}
-                                style={{ color: '#1C1917', textDecoration: 'none', borderBottom: '1px solid var(--yellow)' }}
-                            >
-                                {cleanLink}
-                            </a>
-                        </React.Fragment>
-                    )})}
-                </div>
+                {contactItems.length > 0 && (
+                    <div
+                        style={{
+                            marginTop: '4px',
+                            fontSize: '10.5px',
+                            color: '#333333',
+                            borderBottom: '1px solid #BFBFBF',
+                            paddingBottom: '7px',
+                        }}
+                    >
+                        {contactItems.map((item, index) => (
+                            <React.Fragment key={`${item}-${index}`}>
+                                {index > 0 && <span>{' • '}</span>}
+                                <span>{String(item).replace(/^https?:\/\/(www\.)?/, '')}</span>
+                            </React.Fragment>
+                        ))}
+                    </div>
+                )}
             </header>
 
-            {/* ── Professional Summary ── */}
             {summary && (
-                <section style={SECTION_STYLE}>
-                    <p style={{ margin: 0, color: '#3f3d3a', lineHeight: '1.6', fontSize: '13.5px' }}>
-                        {renderInlineMarkdown(summary)}
+                <section style={sectionStyle}>
+                    <h2 style={sectionHeadingStyle}>SUMMARY</h2>
+                    <p style={{ margin: 0, textAlign: 'left' }}>{renderInlineMarkdown(summary)}</p>
+                </section>
+            )}
+
+            {skills.length > 0 && (
+                <section style={sectionStyle}>
+                    <h2 style={sectionHeadingStyle}>SKILLS</h2>
+                    <p style={{ margin: 0 }}>
+                        {skills.map((skill, index) => (
+                            <React.Fragment key={`${skill}-${index}`}>
+                                {index > 0 && <span>{' • '}</span>}
+                                <span>{skill}</span>
+                            </React.Fragment>
+                        ))}
                     </p>
                 </section>
             )}
 
-            {/* ── Skills ── */}
-            {skills && skills.length > 0 && (
-                <section style={{...SECTION_STYLE, marginTop: '28px'}}>
-                    <h2 style={SECTION_HEADING}>Skills</h2>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                        {skills.map((skill, i) => (
-                            <span key={i} style={{
-                                backgroundColor: '#F5F5F4', // bg-surface
-                                color: '#78716C',
-                                padding: '3px 10px',
-                                borderRadius: '99px',
-                                fontSize: '11.5px',
-                                fontWeight: '600',
-                                border: '1px solid #E7E5E4'
-                            }}>
-                                {skill}
-                            </span>
-                        ))}
-                    </div>
-                </section>
-            )}
-
-            {/* ── Professional Experience ── */}
-            {experience && experience.length > 0 && (
-                <section style={SECTION_STYLE}>
-                    <h2 style={SECTION_HEADING}>Experience</h2>
+            {experience.length > 0 && (
+                <section style={sectionStyle}>
+                    <h2 style={sectionHeadingStyle}>EXPERIENCE</h2>
                     {experience.map((exp, idx) => (
-                        <div key={idx} style={{ marginBottom: '18px' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '4px' }}>
-                                <h3 style={{ fontSize: '14px', fontWeight: '700', margin: 0, color: '#1C1917' }}>
-                                    {exp.title} <span style={{ fontWeight: 400, color: '#78716C' }}>at {exp.company}</span>
-                                </h3>
-                                <span style={{ fontSize: '12px', color: '#A8A29E', whiteSpace: 'nowrap', marginLeft: '12px', fontWeight: 600 }}>{exp.date}</span>
+                        <div
+                            key={`${exp.company}-${exp.title}-${idx}`}
+                            style={{
+                                marginBottom: idx === experience.length - 1 ? 0 : '10px',
+                                breakInside: 'avoid',
+                                pageBreakInside: 'avoid',
+                            }}
+                        >
+                            <div
+                                style={{
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'baseline',
+                                    gap: '12px',
+                                }}
+                            >
+                                <div style={{ fontSize: '12px', minWidth: 0 }}>
+                                    <span style={{ fontStyle: 'italic' }}>
+                                        {exp.company}
+                                    </span>
+                                    {exp.company && exp.title && <span>{', '}</span>}
+                                    <span style={{ fontWeight: 700 }}>{exp.title}</span>
+                                </div>
+                                {exp.date && (
+                                    <div style={{ fontSize: '10.5px', whiteSpace: 'nowrap' }}>
+                                        {exp.date}
+                                    </div>
+                                )}
                             </div>
-                            <ul style={{ margin: 0, paddingLeft: '18px', color: '#3f3d3a', lineHeight: '1.6' }}>
-                                {exp.description && exp.description.map((desc, dIdx) => (
-                                    <li key={dIdx} style={{ marginBottom: '6px' }}>
-                                        {renderInlineMarkdown(desc)}
-                                    </li>
-                                ))}
-                            </ul>
+
+                            {exp.location && (
+                                <div style={{ fontSize: '10.5px', color: '#555555', marginTop: '1px' }}>
+                                    {exp.location}
+                                </div>
+                            )}
+
+                            {Array.isArray(exp.description) && exp.description.length > 0 && (
+                                <ul
+                                    style={{
+                                        margin: '4px 0 0 0',
+                                        paddingLeft: '16px',
+                                    }}
+                                >
+                                    {exp.description.map((desc, dIdx) => (
+                                        <li key={dIdx} style={{ marginBottom: '2px' }}>
+                                            {renderInlineMarkdown(desc)}
+                                        </li>
+                                    ))}
+                                </ul>
+                            )}
                         </div>
                     ))}
                 </section>
             )}
 
-            {/* ── Projects ── */}
-            {projects && projects.length > 0 && (
-                <section style={SECTION_STYLE}>
-                    <h2 style={SECTION_HEADING}>Projects</h2>
+            {projects.length > 0 && (
+                <section style={sectionStyle}>
+                    <h2 style={sectionHeadingStyle}>PROJECTS</h2>
                     {projects.map((proj, idx) => (
-                        <div key={idx} style={{ marginBottom: '14px' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '4px' }}>
-                                <h3 style={{ fontSize: '14px', fontWeight: '700', margin: 0, color: '#1C1917' }}>
-                                    {proj.name}
-                                </h3>
-                                {proj.date && <span style={{ fontSize: '12px', color: '#A8A29E', fontWeight: 600 }}>{proj.date}</span>}
+                        <div
+                            key={`${proj.name}-${idx}`}
+                            style={{
+                                marginBottom: idx === projects.length - 1 ? 0 : '8px',
+                                breakInside: 'avoid',
+                                pageBreakInside: 'avoid',
+                            }}
+                        >
+                            <div
+                                style={{
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'baseline',
+                                    gap: '12px',
+                                }}
+                            >
+                                <div style={{ fontWeight: 700, fontSize: '12px' }}>{proj.name}</div>
+                                {proj.date && (
+                                    <div style={{ fontSize: '10.5px', whiteSpace: 'nowrap' }}>
+                                        {proj.date}
+                                    </div>
+                                )}
                             </div>
-                            <p style={{ fontSize: '13px', margin: '0 0 0 0', color: '#3f3d3a', lineHeight: '1.6' }}>
-                                {renderInlineMarkdown(proj.description)}
-                            </p>
+                            {proj.description && (
+                                <p style={{ margin: '2px 0 0 0' }}>{renderInlineMarkdown(proj.description)}</p>
+                            )}
                         </div>
                     ))}
                 </section>
             )}
 
-            {/* ── Education ── */}
-            {education && education.length > 0 && (
-                <section style={SECTION_STYLE}>
-                    <h2 style={SECTION_HEADING}>Education</h2>
+            {education.length > 0 && (
+                <section style={sectionStyle}>
+                    <h2 style={sectionHeadingStyle}>EDUCATION</h2>
                     {education.map((edu, idx) => (
-                        <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '8px' }}>
+                        <div
+                            key={`${edu.institution}-${edu.degree}-${idx}`}
+                            style={{
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'baseline',
+                                gap: '12px',
+                                marginBottom: idx === education.length - 1 ? 0 : '6px',
+                                breakInside: 'avoid',
+                                pageBreakInside: 'avoid',
+                            }}
+                        >
                             <div>
-                                <h3 style={{ fontSize: '14px', fontWeight: '700', margin: 0, color: '#1C1917' }}>
-                                    {edu.degree}
-                                </h3>
-                                <div style={{ fontSize: '13px', color: '#78716C', marginTop: '2px' }}>{edu.institution}</div>
+                                <div style={{ fontWeight: 700, fontSize: '12px' }}>{edu.institution}</div>
+                                <div>{edu.degree}</div>
                             </div>
-                            <span style={{ fontSize: '12px', color: '#A8A29E', whiteSpace: 'nowrap', marginLeft: '12px', fontWeight: 600 }}>{edu.date}</span>
+                            {edu.date && (
+                                <div style={{ fontSize: '10.5px', whiteSpace: 'nowrap' }}>{edu.date}</div>
+                            )}
                         </div>
                     ))}
                 </section>
@@ -204,4 +259,5 @@ const ResumeTemplate = React.forwardRef(({ data }, ref) => {
 });
 
 ResumeTemplate.displayName = 'ResumeTemplate';
+
 export default ResumeTemplate;

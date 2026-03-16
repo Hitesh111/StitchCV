@@ -41,7 +41,8 @@ export default function Discover({ addToast }) {
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-            <div className="page-header" style={{ width: '100%', maxWidth: 500, textAlign: 'center', marginBottom: 40 }}>
+            <div className="page-header page-hero page-hero-centered" style={{ width: '100%', maxWidth: 680, marginBottom: 40 }}>
+                <div className="page-kicker">Source discovery</div>
                 <h2 className="page-title">Discover</h2>
                 <p className="page-subtitle">Scrape new opportunities directly into your pipeline.</p>
             </div>
@@ -134,7 +135,7 @@ export default function Discover({ addToast }) {
 
             {/* Result card */}
             {result && (
-                <div className="card" style={{ width: '100%', maxWidth: 500, borderColor: 'var(--yellow)', backgroundColor: 'var(--yellow-muted)', marginBottom: 32 }}>
+                <div className="card card-accent" style={{ width: '100%', maxWidth: 500, marginBottom: 32 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
                         <div style={{ width: 40, height: 40, borderRadius: 'var(--radius-btn)', background: 'var(--yellow)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                             <Search size={20} color="#1C1917" />
