@@ -1,9 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import Header from './components/Header';
-import Dashboard from './pages/Dashboard';
-import Jobs from './pages/Jobs';
-import Applications from './pages/Applications';
-import Discover from './pages/Discover';
+
 import Tailor from './pages/Tailor';
 import Auth from './pages/Auth';
 import Landing from './pages/Landing';
@@ -87,19 +84,15 @@ function AppShell() {
                 <Routes>
                     <Route
                         path="/login"
-                        element={user ? <Navigate to="/app" replace /> : <Auth mode="login" addToast={addToast} onAuthenticated={setUser} />}
+                        element={user ? <Navigate to="/tailor" replace /> : <Auth mode="login" addToast={addToast} onAuthenticated={setUser} />}
                     />
                     <Route
                         path="/signup"
-                        element={user ? <Navigate to="/app" replace /> : <Auth mode="signup" addToast={addToast} onAuthenticated={setUser} />}
+                        element={user ? <Navigate to="/tailor" replace /> : <Auth mode="signup" addToast={addToast} onAuthenticated={setUser} />}
                     />
                     <Route path="/" element={<Landing user={user} />} />
-                    <Route path="/app" element={user ? <Dashboard addToast={addToast} /> : <Navigate to={`/login?next=${encodeURIComponent(location.pathname)}`} replace />} />
-                    <Route path="/jobs" element={user ? <Jobs addToast={addToast} /> : <Navigate to={`/login?next=${encodeURIComponent(location.pathname)}`} replace />} />
-                    <Route path="/applications" element={user ? <Applications addToast={addToast} /> : <Navigate to={`/login?next=${encodeURIComponent(location.pathname)}`} replace />} />
-                    <Route path="/discover" element={user ? <Discover addToast={addToast} /> : <Navigate to={`/login?next=${encodeURIComponent(location.pathname)}`} replace />} />
                     <Route path="/tailor" element={user ? <Tailor addToast={addToast} /> : <Navigate to={`/login?next=${encodeURIComponent(location.pathname)}`} replace />} />
-                    <Route path="*" element={<Navigate to={user ? '/app' : '/'} replace />} />
+                    <Route path="*" element={<Navigate to={user ? '/tailor' : '/'} replace />} />
                 </Routes>
             </main>
 

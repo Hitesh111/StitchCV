@@ -27,20 +27,12 @@ export default function Header({ user, onLogout, publicMode = false }) {
     };
 
     const navLinks = [
-        { path: '/app', label: 'Overview' },
-        { path: '/discover', label: 'Discover' },
-        { path: '/jobs', label: 'Jobs' },
-        { path: '/applications', label: 'Applications' },
         { path: '/tailor', label: 'Tailor Resume' }
     ];
 
-    // Mobile bottom nav — 4 tabs + 1 primary (Tailor)
+    // Mobile bottom nav — 1 primary (Tailor)
     const mobileNav = [
-        { path: '/app', label: 'Home', icon: <LayoutDashboard size={18} /> },
-        { path: '/jobs', label: 'Jobs', icon: <Briefcase size={18} /> },
-        { path: '/tailor', label: 'Tailor', icon: <Wand2 size={20} />, primary: true },
-        { path: '/discover', label: 'Discover', icon: <Search size={18} /> },
-        { path: '/applications', label: 'Apply', icon: <ClipboardList size={18} /> },
+        { path: '/tailor', label: 'Tailor', icon: <Wand2 size={20} />, primary: true }
     ];
 
     const isActive = (path) => {
@@ -53,7 +45,7 @@ export default function Header({ user, onLogout, publicMode = false }) {
             <header className="header">
                 <div className="header-container">
                     {/* Logo Area */}
-                    <Link to={publicMode ? '/' : '/app'} className="header-logo">
+                    <Link to={publicMode ? '/' : '/tailor'} className="header-logo">
                         <div className="header-logo-mark">
                             <Zap size={14} strokeWidth={3} />
                         </div>
@@ -94,7 +86,7 @@ export default function Header({ user, onLogout, publicMode = false }) {
                             </Link>
                         )}
                         {publicMode && user && (
-                            <Link className="btn btn-primary header-cta" to="/app">
+                            <Link className="btn btn-primary header-cta" to="/tailor">
                                 Open workspace
                                 <ArrowRight size={14} />
                             </Link>
