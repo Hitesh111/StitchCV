@@ -1,8 +1,8 @@
 import asyncio
 import uuid
 import json
-from hireflow.models.vector_db import store_resume_in_vector_db, get_vector_store
-from hireflow.workflows.resume_tailor_graph import retrieve_experiences
+from stichcv.models.vector_db import store_resume_in_vector_db, get_vector_store
+from stichcv.workflows.resume_tailor_graph import retrieve_experiences
 
 async def test():
     resume_id = str(uuid.uuid4())

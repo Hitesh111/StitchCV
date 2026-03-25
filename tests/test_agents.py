@@ -3,8 +3,8 @@
 import pytest
 from unittest.mock import AsyncMock, patch
 
-from hireflow.agents.jd_analyzer import JDAnalyzerAgent
-from hireflow.models import Job, JobStatus
+from stichcv.agents.jd_analyzer import JDAnalyzerAgent
+from stichcv.models import Job, JobStatus
 
 
 @pytest.fixture
@@ -62,9 +62,9 @@ class TestJDAnalyzerAgent:
         agent = JDAnalyzerAgent()
 
         with patch(
-            "hireflow.agents.jd_analyzer.analyze_jd", new_callable=AsyncMock
+            "stichcv.agents.jd_analyzer.analyze_jd", new_callable=AsyncMock
         ) as mock_analyze, patch(
-            "hireflow.agents.jd_analyzer.get_session"
+            "stichcv.agents.jd_analyzer.get_session"
         ) as mock_get_session:
             mock_analyze.return_value = {"jd_analysis": mock_gemini_response}
             
@@ -121,7 +121,7 @@ class TestResumeTailor:
 
     def test_validate_no_hallucination(self):
         """Test that hallucination detection works."""
-        from hireflow.agents.resume_tailor import ResumeTailorAgent
+        from stichcv.agents.resume_tailor import ResumeTailorAgent
 
         agent = ResumeTailorAgent()
 

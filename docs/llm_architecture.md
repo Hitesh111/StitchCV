@@ -1,8 +1,8 @@
-# HireFlow — LLM & Agent Architecture
+# StichCV — LLM & Agent Architecture
 
 ## Overview
 
-HireFlow uses a **4-node LangGraph pipeline** to tailor resumes. Each node makes one independent LLM call. All calls share a common **provider fallback chain** to avoid rate limits.
+StichCV uses a **4-node LangGraph pipeline** to tailor resumes. Each node makes one independent LLM call. All calls share a common **provider fallback chain** to avoid rate limits.
 
 ---
 
@@ -167,7 +167,7 @@ Input (JD + Master Resume)
 
 ## Parallel Client Implementations
 
-HireFlow has **two** LLM client code paths:
+StichCV has **two** LLM client code paths:
 
 | Path | File | Used By | SDK |
 |---|---|---|---|

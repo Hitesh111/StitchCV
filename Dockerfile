@@ -15,4 +15,4 @@ RUN pip install --no-cache-dir .
 RUN playwright install chromium --with-deps
 
 EXPOSE 8000
-CMD ["gunicorn", "hireflow.api:app", "--workers", "4", "--worker-class", "uvicorn.workers.UvicornWorker", "--bind", "0.0.0.0:8000"]
+CMD ["gunicorn", "stichcv.api:app", "--workers", "4", "--worker-class", "uvicorn.workers.UvicornWorker", "--bind", "0.0.0.0:8000"]

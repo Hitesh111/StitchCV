@@ -3,7 +3,7 @@
 from setuptools import setup, find_packages
 
 setup(
-    name="hireflow",
+    name="stichcv",
     version="0.1.0",
     packages=find_packages(),
     python_requires=">=3.9",
@@ -33,7 +33,7 @@ setup(
     },
     entry_points={
         "console_scripts": [
-            "hireflow=hireflow.main:main",
+            "stichcv=stichcv.main:main",
         ],
     },
 )

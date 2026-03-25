@@ -1,7 +1,7 @@
 import pytest
 
-from hireflow.utils.document_parser import extract_job_description_from_html
-from hireflow.utils.document_parser import extract_job_description_from_url
+from stichcv.utils.document_parser import extract_job_description_from_html
+from stichcv.utils.document_parser import extract_job_description_from_url
 
 
 def test_extract_job_description_from_html_prefers_description_blocks():

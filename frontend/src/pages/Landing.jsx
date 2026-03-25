@@ -11,7 +11,7 @@ export default function Landing({ user }) {
                     <div className="page-kicker">AI job search operating system</div>
                     <h1 className="landing-title">Discover roles, tailor resumes, and run applications from one serious workspace.</h1>
                     <p className="landing-subtitle">
-                        HireFlow combines sourcing, JD analysis, resume tailoring, and application tracking into one focused workflow designed for high-volume job hunts.
+                        StichCV combines sourcing, JD analysis, resume tailoring, and application tracking into one focused workflow designed for high-volume job hunts.
                     </p>
                     <div className="landing-actions">
                         <Link to={primaryHref} className="btn btn-primary">

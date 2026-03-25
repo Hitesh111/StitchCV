@@ -1,4 +1,4 @@
-# HireFlow - Agentic AI Job Application System
+# StichCV - Agentic AI Job Application System
 
 An intelligent, modular system that semi-automatically applies to jobs using Gemini Pro for AI capabilities and Playwright for browser automation.
 
@@ -61,23 +61,23 @@ Edit the files in `data/`:
 - `master_resume.json` - Your complete resume
 - `profile.json` - Your preferences (work auth, salary, locations)
 
-### 4. Run HireFlow
+### 4. Run StichCV
 
 ```bash
 # Discover jobs
-hireflow discover --source linkedin --query "Software Engineer"
+stichcv discover --source linkedin --query "Software Engineer"
 
 # Analyze discovered jobs
-hireflow analyze
+stichcv analyze
 
 # Generate applications (with human review)
-hireflow apply --review
+stichcv apply --review
 ```
 
 ## Project Structure
 
 ```
-hireflow/
+stichcv/
 ├── agents/          # AI agents for each pipeline stage
 ├── models/          # Database models
 ├── services/        # API clients and utilities

@@ -2,7 +2,7 @@ import json
 
 import pytest
 
-from hireflow.workflows.resume_tailor_graph import _compute_resume_scores, score_resumes
+from stichcv.workflows.resume_tailor_graph import _compute_resume_scores, score_resumes
 
 
 def test_compute_resume_scores_rewards_keyword_and_structure_matches():

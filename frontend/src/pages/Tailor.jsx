@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Upload, FileText, Download, Check, Settings, X, Trash2 } from 'lucide-react';
 import ResumeTemplate from '../components/ResumeTemplate';
 
-const STORAGE_KEY = 'hireflow_tailor_v1';
+const STORAGE_KEY = 'stichcv_tailor_v1';
 
 function loadFromStorage() {
     try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null'); }
@@ -130,38 +130,15 @@ export default function Tailor({ addToast }) {
         }
     };
 
-    const handleDownload = () => {
-        if (!tailoredResume) return;
-        addToast('Generating PDF...');
-        fetch('/api/export_resume_pdf', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ resume: tailoredResume, filename: 'tailored_resume.pdf' }),
-        })
-            .then(async (response) => {
-                if (!response.ok) {
-                    const error = await response.json().catch(() => ({ detail: 'PDF export failed' }));
-                    throw new Error(error.detail || 'PDF export failed');
-                }
-                return response.blob();
-            })
-            .then((blob) => {
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = 'tailored_resume.pdf';
-                a.click();
-                URL.revokeObjectURL(url);
-                addToast('Downloaded successfully!', 'success');
-            })
-            .catch((error) => {
-                addToast(error.message, 'error');
-            });
-    };
+
 
     const handleDownloadJson = () => {
         if (!tailoredResume) return;
-        const blob = new Blob([JSON.stringify(tailoredResume, null, 2)], { type: 'application/json' });
+        const payload = {
+            job_description: jdText || fetchedJd || 'Job description from file',
+            resume: tailoredResume
+        };
+        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
@@ -197,7 +174,7 @@ export default function Tailor({ addToast }) {
                     </div>
                     <div className="hero-process-card">
                         <span className="label-caps">Output</span>
-                        <strong>Preview + PDF + JSON</strong>
+                        <strong>Preview + JSON</strong>
                         <p>Review the tailored result before exporting.</p>
                     </div>
                 </div>
@@ -272,7 +249,7 @@ export default function Tailor({ addToast }) {
                                 />
                                 <div className="tips-block" style={{ padding: 14 }}>
                                     <div className="tips-title" style={{ marginBottom: 8 }}>How it works</div>
-                                    <div className="tip-item"><span className="arrow">→</span> HireFlow fetches the page and extracts the JD automatically.</div>
+                                    <div className="tip-item"><span className="arrow">→</span> StichCV fetches the page and extracts the JD automatically.</div>
                                     <div className="tip-item"><span className="arrow">→</span> If the site is heavily rendered, it falls back to the browser session.</div>
                                     <div className="tip-item"><span className="arrow">→</span> LinkedIn links work if a specific job is already selected on the page.</div>
                                     <div className="tip-item"><span className="arrow">→</span> Logged-in pages like LinkedIn work best if your session is already active.</div>
@@ -356,14 +333,8 @@ export default function Tailor({ addToast }) {
                                 </button>
                             )}
                             {tailoredResume && (
-                                <button className="btn btn-outline btn-sm" onClick={handleDownloadJson}>
-                                    <FileText size={14} />
-                                    Download JSON
-                                </button>
-                            )}
-                            {tailoredResume && (
-                                <button className="btn btn-primary btn-sm" onClick={handleDownload}>
-                                    <Download size={14} color="#1C1917"/> Download PDF
+                                <button className="btn btn-primary btn-sm" onClick={handleDownloadJson}>
+                                    <Download size={14} color="#1C1917"/> Download JSON
                                 </button>
                             )}
                         </div>

@@ -1,5 +1,5 @@
 [project]
-name = "hireflow"
+name = "stichcv"
 version = "0.1.0"
 description = "Agentic AI Job Application System"
 readme = "README.md"
@@ -43,7 +43,7 @@ dev = [
 ]
 
 [project.scripts]
-hireflow = "hireflow.main:main"
+stichcv = "stichcv.main:main"
 
 [build-system]
 requires = ["hatchling"]
