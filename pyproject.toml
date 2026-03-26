@@ -1,5 +1,5 @@
 [project]
-name = "stichcv"
+name = "stitchcv"
 version = "0.1.0"
 description = "Agentic AI Job Application System"
 readme = "README.md"
@@ -49,7 +49,7 @@ dev = [
 ]
 
 [project.scripts]
-stichcv = "stichcv.main:main"
+stitchcv = "stitchcv.main:main"
 
 [build-system]
 requires = ["hatchling"]

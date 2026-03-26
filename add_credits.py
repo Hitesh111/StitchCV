@@ -1,6 +1,6 @@
 # import asyncio
-# from stichcv.models.database import get_session
-# from stichcv.models.user import User
+# from stitchcv.models.database import get_session
+# from stitchcv.models.user import User
 # from sqlalchemy import select
 
 # async def add_credits():

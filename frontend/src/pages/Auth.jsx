@@ -47,7 +47,7 @@ export default function Auth({ mode = 'login', addToast, onAuthenticated }) {
             <div className="auth-panel">
                 <div className="auth-copy">
                     <div className="page-kicker">Secure workspace access</div>
-                    <h1 className="auth-title">{isSignup ? 'Create your StichCV workspace' : 'Sign in to StichCV'}</h1>
+                    <h1 className="auth-title">{isSignup ? 'Create your StitchCV workspace' : 'Sign in to StitchCV'}</h1>
                     <p className="auth-subtitle">
                         Keep discovery, tailoring, and application tracking inside one authenticated workspace.
                     </p>

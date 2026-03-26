@@ -1,9 +1,9 @@
 #!/bin/bash
 set -e
 
-echo "Syncing repository to EC2 instance (stichcv-server)..."
+echo "Syncing repository to EC2 instance (stitchcv-server)..."
 # Create deployment directory on remote first
-ssh stichcv-server "mkdir -p ~/stichcv-deployment"
+ssh stitchcv-server "mkdir -p ~/stitchcv-deployment"
 
 # Rsync files to remote (excluding local dev environments and caches)
 rsync -avz --exclude 'node_modules' \
@@ -13,10 +13,10 @@ rsync -avz --exclude 'node_modules' \
            --exclude 'frontend/dist' \
            --exclude 'chroma_db' \
            --exclude '.pytest_cache' \
-           ./ stichcv-server:~/stichcv-deployment/
+           ./ stitchcv-server:~/stitchcv-deployment/
 
 echo "Building and starting Docker containers on EC2..."
-ssh stichcv-server "cd ~/stichcv-deployment && \
+ssh stitchcv-server "cd ~/stitchcv-deployment && \
     docker-compose -f docker-compose.prod.yml down && \
     docker-compose -f docker-compose.prod.yml up --build -d"
 

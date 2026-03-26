@@ -11,7 +11,7 @@ export default function Landing({ user }) {
                     <div className="page-kicker">AI-powered resume adaptation</div>
                     <h1 className="landing-title">Tailor your resume for any job description in seconds.</h1>
                     <p className="landing-subtitle">
-                        StichCV automatically generates targeted, mathematically optimized resumes from your master profile to help you land more interviews.
+                        StitchCV automatically generates targeted, mathematically optimized resumes from your master profile to help you land more interviews.
                     </p>
                     <div className="landing-actions">
                         <Link to={primaryHref} className="btn btn-primary">

@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-echo "Starting StichCV services on server..."
+echo "Starting StitchCV services on server..."
 
 # Check if .env exists, if not use example
 if [ ! -f ".env" ]; then
@@ -25,7 +25,7 @@ echo "Building and starting containers in detached mode..."
 $DOCKER_CMD -f docker-compose.prod.yml up --build -d
 
 echo "----------------------------------------"
-echo "StichCV services started successfully!"
+echo "StitchCV services started successfully!"
 echo "Backend API is running on port 8000"
 echo "Frontend is running on port 80"
 echo "----------------------------------------"

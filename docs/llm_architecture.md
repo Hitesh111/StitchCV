@@ -1,8 +1,8 @@
-# StichCV — LLM & Agent Architecture
+# StitchCV — LLM & Agent Architecture
 
 ## Overview
 
-StichCV uses a **4-node LangGraph pipeline** to tailor resumes. Each node makes one independent LLM call. All calls share a common **provider fallback chain** to avoid rate limits.
+StitchCV uses a **4-node LangGraph pipeline** to tailor resumes. Each node makes one independent LLM call. All calls share a common **provider fallback chain** to avoid rate limits.
 
 ---
 
@@ -167,7 +167,7 @@ Input (JD + Master Resume)
 
 ## Parallel Client Implementations
 
-StichCV has **two** LLM client code paths:
+StitchCV has **two** LLM client code paths:
 
 | Path | File | Used By | SDK |
 |---|---|---|---|

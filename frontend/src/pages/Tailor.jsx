@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Upload, FileText, Download, Check, Settings, X, Trash2 } from 'lucide-react';
 import ResumeTemplate from '../components/ResumeTemplate';
 
-const STORAGE_KEY = 'stichcv_tailor_v1';
+const STORAGE_KEY = 'stitchcv_tailor_v1';
 
 function loadFromStorage() {
     try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null'); }
@@ -249,7 +249,7 @@ export default function Tailor({ addToast }) {
                                 />
                                 <div className="tips-block" style={{ padding: 14 }}>
                                     <div className="tips-title" style={{ marginBottom: 8 }}>How it works</div>
-                                    <div className="tip-item"><span className="arrow">→</span> StichCV fetches the page and extracts the JD automatically.</div>
+                                    <div className="tip-item"><span className="arrow">→</span> StitchCV fetches the page and extracts the JD automatically.</div>
                                     <div className="tip-item"><span className="arrow">→</span> If the site is heavily rendered, it falls back to the browser session.</div>
                                     <div className="tip-item"><span className="arrow">→</span> LinkedIn links work if a specific job is already selected on the page.</div>
                                     <div className="tip-item"><span className="arrow">→</span> Logged-in pages like LinkedIn work best if your session is already active.</div>

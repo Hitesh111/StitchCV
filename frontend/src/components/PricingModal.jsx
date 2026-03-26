@@ -1,10 +1,48 @@
 import { useState, useEffect } from 'react';
 import { X, Check } from 'lucide-react';
 
+const TIERS = [
+    {
+        id: 'starter',
+        name: 'Starter Tier',
+        credits: 5,
+        price: 49,
+        features: [
+            '5 Custom Tailors mapped to ATS', 
+            'Direct PDF resume downloads', 
+            'Standard AI logic'
+        ]
+    },
+    {
+        id: 'pro',
+        name: 'Professional',
+        credits: 12,
+        price: 99,
+        badge: 'Most Popular',
+        features: [
+            '12 Premium Tailored Resumes', 
+            'Unlimited PDF exports', 
+            'Advanced AI structural matching'
+        ]
+    },
+    {
+        id: 'elite',
+        name: 'Elite Queue',
+        credits: 30,
+        price: 199,
+        features: [
+            '30 Custom Tailored Resumes', 
+            'Highest-tier predictive models', 
+            'Priority generation speed'
+        ]
+    }
+];
+
 export default function PricingModal({ isOpen, onClose, onPaymentSuccess }) {
     const [loading, setLoading] = useState(false);
     const [couponCode, setCouponCode] = useState('');
     const [error, setError] = useState(null);
+    const [selectedPackage, setSelectedPackage] = useState('pro');
 
     // Initialize razorpay script dynamically if missing
     useEffect(() => {
@@ -26,7 +64,7 @@ export default function PricingModal({ isOpen, onClose, onPaymentSuccess }) {
             const orderRes = await fetch('/api/billing/create-order', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ package_id: '20_credits', coupon_code: couponCode || null })
+                body: JSON.stringify({ package_id: selectedPackage, coupon_code: couponCode || null })
             });
 
             if (!orderRes.ok) {
@@ -48,8 +86,8 @@ export default function PricingModal({ isOpen, onClose, onPaymentSuccess }) {
                 key: config.razorpay_key_id,
                 amount: order.amount,
                 currency: order.currency,
-                name: 'StichCV',
-                description: '20 Tailored Resumes',
+                name: 'StitchCV',
+                description: 'Upgrade Credits',
                 order_id: order.order_id,
                 handler: async function (response) {
                     try {
@@ -93,7 +131,7 @@ export default function PricingModal({ isOpen, onClose, onPaymentSuccess }) {
 
     return (
         <div className="modal-overlay glass-overlay">
-            <div className="modal-content pricing-modal premium-modal">
+            <div className="modal-content pricing-modal premium-modal" style={{ maxWidth: 900 }}>
                 <button className="pricing-close-btn" onClick={onClose} aria-label="Close modal">
                     <X size={20} />
                 </button>
@@ -114,35 +152,58 @@ export default function PricingModal({ isOpen, onClose, onPaymentSuccess }) {
                     <p>Unlock the ability to magically tailor your resume for any role.</p>
                 </div>
                 
-                <div className="pricing-tiers">
-                    <div className="pricing-card premium-tier">
-                        <div className="premium-glow"></div>
-                        <div className="tier-badge">Most Popular</div>
-                        
-                        <div className="tier-header">
-                            <h3>20 Credits</h3>
-                            <div className="tier-price">
-                                <span className="currency">₹</span>
-                                <span className="amount">299</span>
+                <div className="pricing-tiers" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+                    {TIERS.map((tier) => (
+                        <div 
+                            key={tier.id}
+                            className={`pricing-card ${tier.id === 'pro' ? 'premium-tier' : ''}`}
+                            onClick={() => setSelectedPackage(tier.id)}
+                            style={{
+                                cursor: 'pointer',
+                                position: 'relative',
+                                padding: 24,
+                                borderRadius: 18,
+                                border: `2px solid ${selectedPackage === tier.id ? 'var(--yellow)' : 'var(--border)'}`,
+                                background: selectedPackage === tier.id ? 'var(--bg-surface)' : 'transparent',
+                                transition: 'all 200ms ease',
+                                textAlign: 'left',
+                                overflow: 'hidden'
+                            }}
+                        >
+                            {tier.id === 'pro' && <div className="premium-glow"></div>}
+                            {tier.badge && <div className="tier-badge">{tier.badge}</div>}
+                            
+                            <div className="tier-header" style={{ marginBottom: 20 }}>
+                                <h3 style={{ fontSize: '1rem', color: 'var(--text-secondary)', marginBottom: 12 }}>{tier.name}</h3>
+                                <div style={{ fontSize: '1.2rem', fontWeight: 800, marginBottom: 8, color: 'var(--text-primary)' }}>
+                                    {tier.credits} Credits
+                                </div>
+                                <div className="tier-price" style={{ display: 'flex', alignItems: 'flex-start', color: 'var(--text-primary)' }}>
+                                    <span style={{ fontSize: '1rem', fontWeight: 600, marginTop: 4 }}>₹</span>
+                                    <span style={{ fontSize: '2.5rem', fontWeight: 800, lineHeight: 1, letterSpacing: '-0.03em' }}>{tier.price}</span>
+                                </div>
                             </div>
+                            
+                            <ul className="tier-features" style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+                                {tier.features.map((feature, idx) => (
+                                    <li key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 12, fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
+                                        <Check size={16} strokeWidth={3} className="feature-icon" style={{ color: 'var(--yellow)', flexShrink: 0, marginTop: 2 }} /> 
+                                        <span>{feature}</span>
+                                    </li>
+                                ))}
+                            </ul>
                         </div>
-                        
-                        <ul className="tier-features">
-                            <li><Check size={16} strokeWidth={3} className="feature-icon" /> <span><strong>20 Custom Tailors</strong> completely optimized for ATS</span></li>
-                            <li><Check size={16} strokeWidth={3} className="feature-icon" /> <span><strong>Unlimited</strong> PDF resume downloads</span></li>
-                            <li><Check size={16} strokeWidth={3} className="feature-icon" /> <span><strong>Deep Analysis</strong> using highest-tier AI models</span></li>
-                        </ul>
-                    </div>
+                    ))}
                 </div>
 
                 {error && (
-                    <div className="pricing-error-banner">
+                    <div className="pricing-error-banner" style={{ marginTop: 20 }}>
                         <X size={16} strokeWidth={2.5} />
                         <span>{error}</span>
                     </div>
                 )}
 
-                <div className="pricing-checkout-zone">
+                <div className="pricing-checkout-zone" style={{ marginTop: 24, maxWidth: 440, marginLeft: 'auto', marginRight: 'auto' }}>
                     <div className="discount-input-wrapper">
                         <input 
                             type="text" 
@@ -158,7 +219,7 @@ export default function PricingModal({ isOpen, onClose, onPaymentSuccess }) {
                         onClick={handleCheckout} 
                         disabled={loading}
                     >
-                        {loading ? 'Initiating Secure Checkout...' : 'Upgrade Now via Razorpay'}
+                        {loading ? 'Initiating Secure Checkout...' : `Upgrade to ${TIERS.find(t => t.id === selectedPackage)?.name} via Razorpay`}
                     </button>
                     
                     <div className="checkout-trust">

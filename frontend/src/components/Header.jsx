@@ -7,7 +7,7 @@ export default function Header({ user, onLogout, publicMode = false }) {
     const [isDark, setIsDark] = useState(false);
 
     useEffect(() => {
-        const savedTheme = localStorage.getItem('stichcv-theme');
+        const savedTheme = localStorage.getItem('stitchcv-theme');
         if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
             setIsDark(true);
             document.body.classList.add('dark');
@@ -17,11 +17,11 @@ export default function Header({ user, onLogout, publicMode = false }) {
     const toggleTheme = () => {
         if (isDark) {
             document.body.classList.remove('dark');
-            localStorage.setItem('stichcv-theme', 'light');
+            localStorage.setItem('stitchcv-theme', 'light');
             setIsDark(false);
         } else {
             document.body.classList.add('dark');
-            localStorage.setItem('stichcv-theme', 'dark');
+            localStorage.setItem('stitchcv-theme', 'dark');
             setIsDark(true);
         }
     };
@@ -52,7 +52,7 @@ export default function Header({ user, onLogout, publicMode = false }) {
                             <Zap size={14} strokeWidth={3} />
                         </div>
                         <div className="header-logo-copy">
-                            <span>StichCV</span>
+                            <span>StitchCV</span>
                             <small>AI job command center</small>
                         </div>
                     </Link>

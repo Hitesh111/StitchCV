@@ -1,6 +1,6 @@
 import { Briefcase, FileText, CheckCircle, AlertCircle, TrendingUp } from 'lucide-react';
 
-// Shared Components for StichCV v2
+// Shared Components for StitchCV v2
 
 export function NudgeBar({ text, buttonText, onClick }) {
     return (

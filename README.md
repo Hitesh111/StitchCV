@@ -1,4 +1,4 @@
-# StichCV - Agentic AI Job Application System
+# StitchCV - Agentic AI Job Application System
 
 An intelligent, modular system that semi-automatically applies to jobs using Gemini Pro for AI capabilities and Playwright for browser automation.
 
@@ -61,23 +61,23 @@ Edit the files in `data/`:
 - `master_resume.json` - Your complete resume
 - `profile.json` - Your preferences (work auth, salary, locations)
 
-### 4. Run StichCV
+### 4. Run StitchCV
 
 ```bash
 # Discover jobs
-stichcv discover --source linkedin --query "Software Engineer"
+stitchcv discover --source linkedin --query "Software Engineer"
 
 # Analyze discovered jobs
-stichcv analyze
+stitchcv analyze
 
 # Generate applications (with human review)
-stichcv apply --review
+stitchcv apply --review
 ```
 
 ## Project Structure
 
 ```
-stichcv/
+stitchcv/
 ├── agents/          # AI agents for each pipeline stage
 ├── models/          # Database models
 ├── services/        # API clients and utilities

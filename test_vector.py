@@ -1,8 +1,8 @@
 import asyncio
 import uuid
 import json
-from stichcv.models.vector_db import store_resume_in_vector_db, get_vector_store
-from stichcv.workflows.resume_tailor_graph import retrieve_experiences
+from stitchcv.models.vector_db import store_resume_in_vector_db, get_vector_store
+from stitchcv.workflows.resume_tailor_graph import retrieve_experiences
 
 async def test():
     resume_id = str(uuid.uuid4())
