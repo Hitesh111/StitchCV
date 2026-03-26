@@ -27,12 +27,14 @@ export default function Header({ user, onLogout, publicMode = false }) {
     };
 
     const navLinks = [
-        { path: '/tailor', label: 'Tailor Resume' }
+        { path: '/tailor', label: 'Tailor Resume' },
+        { path: '/applications', label: 'Applications' }
     ];
 
     // Mobile bottom nav — 1 primary (Tailor)
     const mobileNav = [
-        { path: '/tailor', label: 'Tailor', icon: <Wand2 size={20} />, primary: true }
+        { path: '/tailor', label: 'Tailor', icon: <Wand2 size={20} />, primary: true },
+        { path: '/applications', label: 'Applications', icon: <LayoutDashboard size={20} /> }
     ];
 
     const isActive = (path) => {
@@ -90,6 +92,12 @@ export default function Header({ user, onLogout, publicMode = false }) {
                                 Open workspace
                                 <ArrowRight size={14} />
                             </Link>
+                        )}
+                        {user && (
+                            <div className="header-credits" onClick={() => document.dispatchEvent(new CustomEvent('open-pricing'))} title="Buy Credits">
+                                <Zap size={14} className="credits-icon" />
+                                <span>{user.credits ?? 0} Credits</span>
+                            </div>
                         )}
                         {user && (
                             <div className="header-user-pill" title={user.email}>

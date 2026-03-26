@@ -4,14 +4,18 @@ from __future__ import annotations
 import enum
 import hashlib
 from datetime import datetime
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 from uuid import uuid4
 
-from sqlalchemy import DateTime, Enum, Float, String, Text, func
+from sqlalchemy import DateTime, Enum, Float, String, Text, func, ForeignKey
 from sqlalchemy.dialects.sqlite import JSON
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from stichcv.models.database import Base
+
+if TYPE_CHECKING:
+    from stichcv.models.user import User
+
 
 
 class JobStatus(enum.Enum):
@@ -56,6 +60,9 @@ class Job(Base):
     match_score: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
 
     # Relationships
+    user_id: Mapped[Optional[str]] = mapped_column(String(36), ForeignKey("users.id"), index=True, nullable=True)
+    user: Mapped[Optional["User"]] = relationship("User", back_populates="jobs")
+
     applications: Mapped[list["Application"]] = relationship(
         "Application", back_populates="job", cascade="all, delete-orphan"
     )

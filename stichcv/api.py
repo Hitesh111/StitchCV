@@ -23,6 +23,8 @@ from stichcv.models import (
     ApplicationLog,
     ResumeVersion,
     User,
+    Transaction,
+    Coupon,
 )
 from stichcv.auth import (
     SESSION_COOKIE_NAME,
@@ -136,6 +138,7 @@ class AuthUserResponse(BaseModel):
     email: str
     full_name: str
     avatar_url: Optional[str] = None
+    credits: int = 3
 
 
 class SignupRequest(BaseModel):
@@ -155,6 +158,7 @@ def _serialize_user(user: User) -> AuthUserResponse:
         email=user.email,
         full_name=user.full_name,
         avatar_url=user.avatar_url,
+        credits=user.credits,
     )
 
 
@@ -398,6 +402,108 @@ async def _oauth_callback_common(
     return redirect
 
 
+# --- Billing ---
+
+class CreateOrderRequest(BaseModel):
+    package_id: str
+    coupon_code: Optional[str] = None
+
+class VerifyPaymentRequest(BaseModel):
+    razorpay_order_id: str
+    razorpay_payment_id: str
+    razorpay_signature: str
+
+@app.get("/api/billing/config")
+async def get_billing_config(current_user: User = Depends(require_current_user)):
+    return {"razorpay_key_id": settings.razorpay_key_id}
+
+@app.post("/api/billing/create-order")
+async def create_billing_order(req: CreateOrderRequest, current_user: User = Depends(require_current_user)):
+    from stichcv.services.billing_service import get_razorpay_client
+    from sqlalchemy import select
+    
+    amount_inr = 299  # Base price for 20 credits package
+    credits_to_award = 20
+    
+    if req.package_id != "20_credits":
+        raise HTTPException(400, "Invalid package")
+        
+    async with get_session() as session:
+        if req.coupon_code:
+            result = await session.execute(select(Coupon).where(Coupon.code == req.coupon_code.upper(), Coupon.is_active == True))
+            coupon = result.scalar_one_or_none()
+            if not coupon:
+                raise HTTPException(404, "Invalid or expired coupon")
+            if coupon.max_uses and coupon.current_uses >= coupon.max_uses:
+                raise HTTPException(400, "Coupon usage limit reached")
+                
+            discount = int(amount_inr * (coupon.discount_percentage / 100))
+            amount_inr -= discount
+            
+        amount_paise = amount_inr * 100
+        
+        client = get_razorpay_client()
+        if not client:
+            raise HTTPException(500, "Payment gateway not configured")
+            
+        order_data = {
+            "amount": amount_paise,
+            "currency": "INR",
+            "receipt": f"rcpt_{current_user.id[:8]}",
+            "notes": {"user_id": current_user.id, "package": req.package_id}
+        }
+        
+        try:
+            order = client.order.create(data=order_data)
+        except Exception as e:
+            logger.error(f"Razorpay order creation failed: {e}")
+            raise HTTPException(500, "Failed to initialize payment")
+            
+        transaction = Transaction(
+            user_id=current_user.id,
+            razorpay_order_id=order["id"],
+            amount_paise=amount_paise,
+            credits_awarded=credits_to_award
+        )
+        session.add(transaction)
+        await session.flush()
+        
+        if req.coupon_code:
+            coupon.current_uses += 1
+            
+        await session.commit()
+        return {"order_id": order["id"], "amount": amount_paise, "currency": "INR"}
+
+@app.post("/api/billing/verify-payment")
+async def verify_payment(req: VerifyPaymentRequest, current_user: User = Depends(require_current_user)):
+    from stichcv.services.billing_service import verify_razorpay_signature
+    from sqlalchemy import select
+    
+    is_valid = verify_razorpay_signature(req.razorpay_order_id, req.razorpay_payment_id, req.razorpay_signature)
+    
+    if not is_valid:
+        raise HTTPException(400, "Invalid payment signature")
+        
+    async with get_session() as session:
+        result = await session.execute(select(Transaction).where(Transaction.razorpay_order_id == req.razorpay_order_id))
+        transaction = result.scalar_one_or_none()
+        
+        if not transaction:
+            raise HTTPException(404, "Transaction not found")
+        if transaction.status == "success":
+            return {"status": "success", "credits_awarded": 0}
+            
+        transaction.status = "success"
+        transaction.razorpay_payment_id = req.razorpay_payment_id
+        
+        result = await session.execute(select(User).where(User.id == current_user.id))
+        db_user = result.scalar_one()
+        db_user.credits += transaction.credits_awarded
+        
+        await session.commit()
+        return {"status": "success", "credits_awarded": transaction.credits_awarded}
+
+
 # --- Jobs ---
 
 
@@ -414,7 +520,7 @@ async def list_jobs(
     from sqlalchemy import select, desc
 
     async with get_session() as session:
-        stmt = select(Job).order_by(desc(Job.created_at))
+        stmt = select(Job).where((Job.user_id == current_user.id) | (Job.user_id.is_(None))).order_by(desc(Job.created_at))
 
         if status:
             try:
@@ -596,6 +702,9 @@ async def tailor_resume_manual(
     current_user: User = Depends(require_current_user),
 ):
     """Tailor a provided resume for a given job description with support for files."""
+    if current_user.credits < 1:
+        raise HTTPException(403, "Insufficient credits. Please purchase more credits to continue tailoring resumes.")
+        
     try:
         from stichcv.workflows.resume_tailor_graph import (
             run_resume_tailor_graph,
@@ -680,8 +789,68 @@ async def tailor_resume_manual(
                 ).decode()
                 yield f"event: jd_preview\ndata: {payload}\n\n"
 
+            final_resume_dict = None
+            company_name = "Target Company"
+            job_role = "Tailored Role"
             async for chunk in run_resume_tailor_graph(jd_content, resume_id, master_resume_json):
+                if chunk.startswith("event: result\ndata: "):
+                    try:
+                        encoded = chunk[len("event: result\ndata: "):].strip()
+                        payload_str = base64.b64decode(encoded).decode('utf-8')
+                        payload = json.loads(payload_str)
+                        final_resume_dict = json.loads(payload.get("formatted_resume", "{}"))
+                        company_name = payload.get("company", "Target Company")
+                        job_role = payload.get("title", "Tailored Role")
+                    except Exception:
+                        pass
                 yield chunk
+
+            # Database updates (Credits, Job, Application, ResumeVersion)
+            from sqlalchemy import select
+            import uuid
+            async with get_session() as session:
+                # 1. Deduct credits
+                result = await session.execute(select(User).where(User.id == current_user.id))
+                db_user = result.scalar_one()
+                db_user.credits = max(0, db_user.credits - 1)
+                
+                # 2. Save tailored resume context
+                if final_resume_dict:
+                    try:
+                        # Create Job entry for tracing
+                        new_job = Job(
+                            id=str(uuid.uuid4()),
+                            company=company_name,
+                            role=job_role,
+                            location="Remote",
+                            job_description=jd_content[:5000],
+                            apply_link=f"manual-{uuid.uuid4()}",
+                            source="manual",
+                            content_hash=Job.compute_content_hash("Custom", "Custom", jd_content[:200] + str(uuid.uuid4())),
+                            user_id=current_user.id
+                        )
+                        session.add(new_job)
+
+                        # Create Application entry
+                        new_app = Application(
+                            id=str(uuid.uuid4()),
+                            job_id=new_job.id,
+                            user_id=current_user.id,
+                            status=ApplicationStatus.APPROVED
+                        )
+                        session.add(new_app)
+                        
+                        # Create ResumeVersion entry
+                        new_resume = ResumeVersion(
+                            id=str(uuid.uuid4()),
+                            application_id=new_app.id,
+                            content=final_resume_dict
+                        )
+                        session.add(new_resume)
+                    except Exception as e:
+                        logger.error(f"Failed to save customized resume to DB: {e}")
+
+                await session.commit()
 
         return StreamingResponse(stream_tailor_response(), media_type="text/event-stream")
     except HTTPException:
@@ -698,6 +867,65 @@ async def tailor_resume_manual(
 
 # --- Applications ---
 
+class UpdateApplicationRequest(BaseModel):
+    company: Optional[str] = None
+    role: Optional[str] = None
+    status: Optional[str] = None
+
+@app.put("/api/applications/{id}")
+async def update_application(id: str, req: UpdateApplicationRequest, current_user: User = Depends(require_current_user)):
+    from sqlalchemy import select
+    async with get_session() as session:
+        result = await session.execute(
+            select(Application, Job)
+            .join(Job, Application.job_id == Job.id)
+            .where(Application.id == id, Application.user_id == current_user.id)
+        )
+        row = result.first()
+        if not row:
+            raise HTTPException(404, "Application not found")
+            
+        app_obj, job_obj = row
+        
+        if req.status:
+            try:
+                app_obj.status = ApplicationStatus(req.status)
+            except ValueError:
+                raise HTTPException(400, "Invalid status")
+                
+        if req.company:
+            job_obj.company = req.company
+            
+        if req.role:
+            job_obj.role = req.role
+            
+        await session.commit()
+        return {"success": True}
+
+@app.delete("/api/applications/{id}")
+async def delete_application(id: str, current_user: User = Depends(require_current_user)):
+    from sqlalchemy import select
+    async with get_session() as session:
+        result = await session.execute(select(Application).where(Application.id == id, Application.user_id == current_user.id))
+        app_obj = result.scalar_one_or_none()
+        if not app_obj:
+            raise HTTPException(404, "Application not found")
+            
+        # Optional: delete the associated Job if it's the only application for it
+        job_id = app_obj.job_id
+        await session.delete(app_obj)
+        
+        # Check if job is still used
+        job_apps = await session.execute(select(Application).where(Application.job_id == job_id))
+        if len(job_apps.all()) == 0:
+            job_to_del = await session.execute(select(Job).where(Job.id == job_id))
+            job_obj = job_to_del.scalar_one_or_none()
+            if job_obj:
+                await session.delete(job_obj)
+                
+        await session.commit()
+        return {"success": True}
+
 
 @app.get("/api/applications", response_model=list[ApplicationResponse])
 async def list_applications(
@@ -712,6 +940,7 @@ async def list_applications(
         stmt = (
             select(Application, Job)
             .join(Job, Application.job_id == Job.id)
+            .where(Application.user_id == current_user.id)
             .order_by(desc(Application.created_at))
         )
 
@@ -739,6 +968,29 @@ async def list_applications(
             )
             for app, job in rows
         ]
+
+
+@app.get("/api/applications/{id}/resume")
+async def get_application_resume(id: str, current_user: User = Depends(require_current_user)):
+    """Fetch the JSON payload of the tailored resume for a specific application."""
+    from sqlalchemy import select
+    
+    async with get_session() as session:
+        result = await session.execute(select(Application).where(Application.id == id, Application.user_id == current_user.id))
+        application = result.scalar_one_or_none()
+        if not application:
+            raise HTTPException(404, "Application not found")
+            
+        res_ver_result = await session.execute(
+            select(ResumeVersion)
+            .where(ResumeVersion.application_id == id)
+            .order_by(ResumeVersion.created_at.desc())
+        )
+        resume_version = res_ver_result.scalars().first()
+        if not resume_version:
+            raise HTTPException(404, "Resume not found for this application")
+            
+        return resume_version.content
 
 
 @app.get("/api/pending", response_model=list[dict])

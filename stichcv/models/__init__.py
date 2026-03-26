@@ -6,6 +6,7 @@ from stichcv.models.job import Job, JobStatus
 from stichcv.models.application import Application, ApplicationStatus, ApplicationLog
 from stichcv.models.resume import ResumeVersion
 from stichcv.models.user import User, OAuthAccount, UserSession
+from stichcv.models.billing import Transaction, Coupon
 
 __all__ = [
     "Base",
@@ -20,4 +21,6 @@ __all__ = [
     "User",
     "OAuthAccount",
     "UserSession",
+    "Transaction",
+    "Coupon",
 ]

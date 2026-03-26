@@ -1906,3 +1906,278 @@ select.form-input {
   .stat-grid,
   .stats-grid { grid-template-columns: 1fr !important; }
 }
+
+/* ===== Premium Pricing Modal ===== */
+.premium-modal {
+  max-width: 440px;
+  width: 90%;
+  padding: 38px 32px;
+  border-radius: 24px;
+  border: 1px solid color-mix(in srgb, var(--yellow) 30%, var(--border));
+  background: var(--bg-card);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  position: relative;
+  overflow: hidden;
+  text-align: center;
+}
+
+.dark .premium-modal {
+  background: linear-gradient(180deg, rgba(35, 31, 28, 0.98) 0%, rgba(27, 26, 25, 0.98) 100%);
+  border: 1px solid rgba(234, 179, 8, 0.2);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.pricing-close-btn {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 50%;
+  display: flex;
+  transition: all 150ms ease;
+}
+
+.pricing-close-btn:hover {
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  transform: scale(1.05);
+}
+
+.pricing-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 28px;
+}
+
+.pricing-sparkle { margin-bottom: 12px; }
+
+.pricing-header h2 {
+  font-size: 1.8rem;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  margin-bottom: 8px;
+  background: var(--gradient-brand);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.pricing-header p {
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  line-height: 1.5;
+  max-width: 300px;
+}
+
+.pricing-tiers { margin-bottom: 24px; text-align: left; }
+
+.premium-tier {
+  position: relative;
+  padding: 24px;
+  border-radius: 18px;
+  border: 2px solid color-mix(in srgb, var(--yellow) 40%, transparent);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--yellow) 4%, transparent) 0%, transparent 100%);
+  overflow: hidden;
+}
+
+.premium-glow {
+  position: absolute;
+  top: -50px;
+  left: -50px;
+  width: 150px;
+  height: 150px;
+  background: radial-gradient(circle, color-mix(in srgb, var(--yellow) 30%, transparent) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.tier-badge {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: var(--yellow-pop);
+  color: #1c1917;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 4px 10px;
+  border-radius: 20px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.tier-header {
+  margin-bottom: 20px;
+}
+
+.tier-header h3 {
+  font-size: 1.1rem;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+
+.tier-price {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+  color: var(--text-primary);
+}
+
+.tier-price .currency {
+  font-size: 1.4rem;
+  font-weight: 600;
+  margin-top: 4px;
+  color: var(--text-muted);
+}
+
+.tier-price .amount {
+  font-size: 3rem;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.05em;
+}
+
+.tier-features {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.tier-features li {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.tier-features li strong { color: var(--text-primary); }
+
+.feature-icon {
+  color: var(--yellow-dark);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.pricing-checkout-zone {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.discount-input-wrapper { position: relative; }
+
+.discount-input {
+  width: 100%;
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font-size: 0.95rem;
+  text-align: center;
+  font-weight: 500;
+  outline: none;
+  transition: all 200ms ease;
+}
+
+.discount-input:focus {
+  border-color: var(--yellow);
+  box-shadow: 0 0 0 4px var(--focus-ring);
+  background: var(--bg-card);
+}
+
+.btn-checkout {
+  width: 100%;
+  padding: 16px;
+  border-radius: 12px;
+  font-size: 1.05rem;
+  font-weight: 700;
+  background: var(--gradient-brand);
+  color: #1C1917;
+  border: none;
+  box-shadow: 0 6px 16px color-mix(in srgb, var(--yellow) 30%, transparent), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  cursor: pointer;
+  transition: all 200ms ease;
+}
+
+.btn-checkout:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px color-mix(in srgb, var(--yellow) 45%, transparent), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+
+.btn-checkout.loading { opacity: 0.8; pointer-events: none; transform: none; }
+
+.checkout-trust {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.pricing-error-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px;
+  background: rgba(220, 38, 38, 0.1);
+  border: 1px solid rgba(220, 38, 38, 0.2);
+  border-radius: 10px;
+  color: #DC2626;
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin-bottom: 20px;
+  text-align: left;
+}
+
+.header-credits {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--yellow) 15%, transparent);
+  color: var(--yellow-dark);
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+  border: 1px solid color-mix(in srgb, var(--yellow) 30%, transparent);
+  transition: all 150ms ease;
+}
+
+.dark .header-credits {
+  color: var(--yellow-pop);
+}
+
+.header-credits:hover {
+  background: color-mix(in srgb, var(--yellow) 25%, transparent);
+  transform: translateY(-1px);
+}
+
+/* ===== Print Styles ===== */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  .print-only {
+    display: block !important;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+  }
+  body, html {
+    background: white !important;
+    height: 100%;
+  }
+  .print-only * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}

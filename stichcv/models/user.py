@@ -2,8 +2,12 @@ from __future__ import annotations
 """User and auth session models."""
 
 from datetime import datetime
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 from uuid import uuid4
+
+if TYPE_CHECKING:
+    from stichcv.models.job import Job
+    from stichcv.models.application import Application
 
 from sqlalchemy import Boolean, DateTime, ForeignKey, String, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -21,6 +25,7 @@ class User(Base):
     full_name: Mapped[str] = mapped_column(String(255))
     password_hash: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     avatar_url: Mapped[Optional[str]] = mapped_column(String(2048), nullable=True)
+    credits: Mapped[int] = mapped_column(default=3)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
@@ -32,6 +37,12 @@ class User(Base):
     )
     sessions: Mapped[list["UserSession"]] = relationship(
         "UserSession", back_populates="user", cascade="all, delete-orphan"
+    )
+    jobs: Mapped[list["Job"]] = relationship(
+        "Job", back_populates="user", cascade="all, delete-orphan"
+    )
+    applications: Mapped[list["Application"]] = relationship(
+        "Application", back_populates="user", cascade="all, delete-orphan"
     )
 
 

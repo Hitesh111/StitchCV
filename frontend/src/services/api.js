@@ -73,6 +73,10 @@ export const api = {
 
     getPending: () => request('/pending'),
 
+    getApplicationResume: (id) => request(`/applications/${id}/resume`),
+    updateApplication: (id, data) => request(`/applications/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    deleteApplication: (id) => request(`/applications/${id}`, { method: 'DELETE' }),
+
     // Stats
     getStats: () => request('/stats'),
 };

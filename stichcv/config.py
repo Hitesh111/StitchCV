@@ -61,6 +61,8 @@ class Settings(BaseSettings):
     google_client_secret: str = Field(default="", description="Google OAuth client secret")
     linkedin_client_id: str = Field(default="", description="LinkedIn OAuth client id")
     linkedin_client_secret: str = Field(default="", description="LinkedIn OAuth client secret")
+    razorpay_key_id: str = Field(default="", description="Razorpay API Key ID")
+    razorpay_key_secret: str = Field(default="", description="Razorpay API Key Secret")
     default_work_authorization: str = Field(
         default="authorized", description="Default work authorization status"
     )

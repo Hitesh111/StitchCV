@@ -1,7 +1,9 @@
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import Header from './components/Header';
+import PricingModal from './components/PricingModal';
 
 import Tailor from './pages/Tailor';
+import Dashboard from './pages/Dashboard';
 import Auth from './pages/Auth';
 import Landing from './pages/Landing';
 import { useState, useCallback, useRef, useEffect } from 'react';
@@ -12,6 +14,7 @@ function AppShell() {
     const [toast, setToast] = useState(null);
     const [authLoading, setAuthLoading] = useState(true);
     const [user, setUser] = useState(null);
+    const [isPricingOpen, setIsPricingOpen] = useState(false);
     const toastTimerRef = useRef(null);
     const location = useLocation();
     const navigate = useNavigate();
@@ -38,8 +41,19 @@ function AppShell() {
             .finally(() => {
                 if (mounted) setAuthLoading(false);
             });
-        return () => { mounted = false; };
+            
+        const handleOpenPricing = () => setIsPricingOpen(true);
+        document.addEventListener('open-pricing', handleOpenPricing);
+            
+        return () => { 
+            mounted = false; 
+            document.removeEventListener('open-pricing', handleOpenPricing);
+        };
     }, []);
+
+    const refreshUser = () => {
+        api.me().then(me => setUser(me)).catch(console.error);
+    };
 
     async function handleLogout() {
         try {
@@ -92,9 +106,19 @@ function AppShell() {
                     />
                     <Route path="/" element={<Landing user={user} />} />
                     <Route path="/tailor" element={user ? <Tailor addToast={addToast} /> : <Navigate to={`/login?next=${encodeURIComponent(location.pathname)}`} replace />} />
+                    <Route path="/applications" element={user ? <Dashboard addToast={addToast} /> : <Navigate to={`/login?next=${encodeURIComponent(location.pathname)}`} replace />} />
                     <Route path="*" element={<Navigate to={user ? '/tailor' : '/'} replace />} />
                 </Routes>
             </main>
+            
+            <PricingModal 
+                isOpen={isPricingOpen} 
+                onClose={() => setIsPricingOpen(false)} 
+                onPaymentSuccess={() => {
+                    refreshUser();
+                    addToast('Payment successful! Your credits have been added.', 'success');
+                }} 
+            />
 
             <div className="toast-container">
                 {toast && (

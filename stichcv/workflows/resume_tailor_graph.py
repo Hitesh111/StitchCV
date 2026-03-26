@@ -64,6 +64,7 @@ async def analyze_jd(state: ResumeTailorState):
     prompt = f"""Analyze the following job description and extract the key requirements.
 Return JSON with the following structure:
 {{
+    "company": "Company Name",
     "title": "Job Title",
     "must_have_keywords": ["keyword1", "keyword2"],
     "required_experience": "Brief summary of required experience"
@@ -86,7 +87,7 @@ Job Description:
     try:
         jd_analysis = json.loads(content)
     except json.JSONDecodeError:
-        jd_analysis = {"title": "Unknown", "must_have_keywords": [], "required_experience": ""}
+        jd_analysis = {"company": "Unknown", "title": "Unknown", "must_have_keywords": [], "required_experience": ""}
         
     return {"jd_analysis": jd_analysis}
 
@@ -422,6 +423,7 @@ async def run_resume_tailor_graph(job_description: str, master_resume_id: str, m
     
     # Cache the tailored resume from draft_resume node so score_resumes can use it
     cached_tailored = ""
+    cached_jd_analysis = {}
 
     # We will use astream instead of ainvoke
     # astream yields the state after each node completes
@@ -429,6 +431,7 @@ async def run_resume_tailor_graph(job_description: str, master_resume_id: str, m
         # output is a dict like {"analyze_jd": {"jd_analysis": ...}}
         for node_name, state_update in output.items():
             if node_name == "analyze_jd":
+                cached_jd_analysis = state_update.get("jd_analysis", {})
                 yield "event: log\ndata: 🔍 Mapped the key skills and requirements from the job posting.\n\n"
             elif node_name == "retrieve_experiences":
                 yield "event: log\ndata: ✨ Found your most relevant experiences for this role.\n\n"
@@ -440,10 +443,14 @@ async def run_resume_tailor_graph(job_description: str, master_resume_id: str, m
                 yield "event: log\ndata: 📊 Calculating your ATS match score — done!\n\n"
                 input_scores = state_update.get("input_scores", {})
                 output_scores = state_update.get("output_scores", {})
+                
+                # Fetch metadata from JD analysis if missing
                 payload = {
                     "formatted_resume": cached_tailored,
                     "input_scores": input_scores,
-                    "output_scores": output_scores
+                    "output_scores": output_scores,
+                    "company": cached_jd_analysis.get("company", "Target Company"),
+                    "title": cached_jd_analysis.get("title", "Tailored Role")
                 }
                 # Use base64 encoding so SSE newlines never corrupt the JSON payload
                 encoded = base64.b64encode(json.dumps(payload).encode()).decode()

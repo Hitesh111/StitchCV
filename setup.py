@@ -15,6 +15,7 @@ setup(
         "pydantic>=2.0.0",
         "pydantic-settings>=2.0.0",
         "python-dotenv>=1.0.0",
+        "bcrypt>=4.1.2",
         "aiohttp>=3.9.0",
         "tenacity>=8.2.0",
         "structlog>=24.0.0",
@@ -22,6 +23,13 @@ setup(
         "lxml>=5.0.0",
         "fastapi>=0.110.0",
         "uvicorn[standard]>=0.27.0",
+        "langgraph>=0.0.50",
+        "langchain-google-genai>=1.0.3",
+        "langchain-groq>=0.1.0",
+        "langchain-chroma>=0.1.0",
+        "langchain-openai>=0.1.0",
+        "chromadb>=0.4.0",
+        "razorpay>=1.4.1",
     ],
     extras_require={
         "dev": [

@@ -14,6 +14,7 @@ from stichcv.models.database import Base
 if TYPE_CHECKING:
     from stichcv.models.job import Job
     from stichcv.models.resume import ResumeVersion
+    from stichcv.models.user import User
 
 
 class ApplicationStatus(enum.Enum):
@@ -50,6 +51,9 @@ class Application(Base):
     response: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
     # Relationships
+    user_id: Mapped[Optional[str]] = mapped_column(String(36), ForeignKey("users.id"), index=True, nullable=True)
+    user: Mapped[Optional["User"]] = relationship("User", back_populates="applications")
+
     job: Mapped["Job"] = relationship("Job", back_populates="applications")
     resume_versions: Mapped[list["ResumeVersion"]] = relationship(
         "ResumeVersion", back_populates="application", cascade="all, delete-orphan"
