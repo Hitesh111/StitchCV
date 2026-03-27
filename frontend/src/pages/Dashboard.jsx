@@ -8,6 +8,7 @@ export default function Dashboard({ addToast }) {
     const [isLoading, setIsLoading] = useState(true);
     const [viewingResume, setViewingResume] = useState(null);
     const [viewingApp, setViewingApp] = useState(null);
+    const [viewingJob, setViewingJob] = useState(null);
     const [editingApp, setEditingApp] = useState(null);
     const [editForm, setEditForm] = useState({ company: '', role: '', status: '' });
     const pdfRef = useRef(null);
@@ -21,8 +22,16 @@ export default function Dashboard({ addToast }) {
 
     const handleViewResume = async (app) => {
         try {
-            const data = await api.getApplicationResume(app.id);
-            setViewingResume(data);
+            setViewingResume(null);
+            setViewingJob(null);
+            
+            const [resumeData, jobData] = await Promise.all([
+                api.getApplicationResume(app.id),
+                api.getJob(app.job_id).catch(() => ({ failed: true }))
+            ]);
+            
+            setViewingResume(resumeData);
+            setViewingJob(jobData);
             setViewingApp(app);
         } catch(e) {
             addToast('Failed to fetch resume: ' + e.message, 'error');
@@ -198,33 +207,75 @@ export default function Dashboard({ addToast }) {
 
             {/* Resume Viewer Modal */}
             {viewingResume && (
-                <div className="modal-overlay no-print" onClick={() => setViewingResume(null)}>
-                    <div className="modal-content resume-viewer-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 900, width: '90%', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
-                        <div style={{ padding: 24, borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div className="modal-overlay no-print" onClick={() => { setViewingResume(null); setViewingJob(null); }} style={{ padding: 0, backgroundColor: 'var(--bg-body)' }}>
+                    <div className="modal-content resume-viewer-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '100%', width: '100vw', height: '100vh', maxHeight: '100vh', margin: 0, borderRadius: 0, border: 'none', display: 'flex', flexDirection: 'column' }}>
+                        <div style={{ padding: '20px 32px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'var(--bg-card)' }}>
                             <div>
                                 <h3 style={{ margin: 0, fontSize: 18 }}>{viewingApp?.company}</h3>
                                 <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{viewingApp?.role}</div>
                             </div>
                             <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-                                <button className="btn btn-primary" onClick={handlePrintPDF}>
+                                <button className="btn btn-primary" onClick={() => {
+                                    const originalTitle = document.title;
+                                    const originalPath = window.location.pathname;
+                                    document.title = '\u200B'; // zero width space
+                                    window.history.replaceState(null, '', '/');
+                                    
+                                    setTimeout(() => {
+                                        window.print();
+                                        document.title = originalTitle;
+                                        window.history.replaceState(null, '', originalPath);
+                                    }, 100);
+                                }}>
                                     <Printer size={16} color="#1C1917" /> Download PDF
                                 </button>
-                                <button className="modal-close" onClick={() => setViewingResume(null)}>
+                                <button className="modal-close" onClick={() => { setViewingResume(null); setViewingJob(null); }}>
                                     <X size={20} />
                                 </button>
                             </div>
                         </div>
-                        <div style={{ flex: 1, overflowY: 'auto', padding: 24, backgroundColor: 'var(--bg-body)' }}>
-                            <div style={{
-                                minWidth: '816px',
-                                maxWidth: '816px',
-                                margin: '0 auto',
-                                backgroundColor: '#fff',
-                                boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
-                                borderRadius: '4px',
-                                padding: 'var(--space-4)'
+                        <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+                            {/* JD Sidebar */}
+                            <div style={{ 
+                                width: '380px', 
+                                borderRight: '1px solid var(--border)', 
+                                padding: 24, 
+                                overflowY: 'auto',
+                                backgroundColor: 'var(--bg-surface)' 
                             }}>
-                                <ResumeTemplate data={viewingResume} ref={pdfRef} />
+                                <h4 style={{ margin: '0 0 16px 0', fontSize: '0.95rem', color: 'var(--text-primary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Job Description</h4>
+                                {viewingJob ? (
+                                    <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>
+                                        {viewingJob.failed ? (
+                                            <span style={{ fontStyle: 'italic', color: 'var(--error)' }}>Failed to fetch job description.</span>
+                                        ) : (
+                                            viewingJob.job_description || <span style={{ fontStyle: 'italic' }}>No job description text recorded for this application.</span>
+                                        )}
+                                    </div>
+                                ) : (
+                                    <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Loading description...</div>
+                                )}
+                            </div>
+                            
+                            {/* Resume Preview Pane */}
+                            <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', backgroundColor: 'var(--bg-page)', padding: '32px 0' }}>
+                                <div style={{ 
+                                    display: 'flex',
+                                    justifyContent: 'center',
+                                    alignItems: 'flex-start',
+                                    minHeight: '100%'
+                                }}>
+                                    <div style={{
+                                        width: '816px',
+                                        minHeight: '1056px',
+                                        backgroundColor: '#fff',
+                                        boxShadow: '0 8px 32px rgba(0,0,0,0.08)',
+                                        borderRadius: '4px',
+                                        padding: 'var(--space-4)',
+                                    }}>
+                                        <ResumeTemplate data={viewingResume} ref={pdfRef} />
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
