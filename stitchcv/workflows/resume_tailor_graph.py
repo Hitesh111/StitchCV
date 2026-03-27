@@ -22,13 +22,14 @@ class ResumeTailorState(TypedDict):
     input_scores: Dict[str, Any]
     output_scores: Dict[str, Any]
 
-def _get_fallback_llm(temperature: float = 0.1, max_retries: int = 1):
+def _get_fallback_llm(temperature: float = 0.1, max_retries: int = 0):
     """Returns a Gemini LLM configured with Groq and OpenRouter fallbacks if keys are available."""
+    # Enforce max_retries=0 locally so 429s trigger an instant fallback instead of hanging on SDK backoffs.
     gemini = ChatGoogleGenerativeAI(
         model=settings.gemini_model,
         google_api_key=settings.active_gemini_api_key,
         temperature=temperature,
-        max_retries=max_retries
+        max_retries=0
     )
     
     fallbacks = []
@@ -38,7 +39,7 @@ def _get_fallback_llm(temperature: float = 0.1, max_retries: int = 1):
             model="llama-3.3-70b-versatile",
             api_key=settings.groq_api_key,
             temperature=temperature,
-            max_retries=max_retries
+            max_retries=0
         )
         fallbacks.append(groq)
         
@@ -48,12 +49,19 @@ def _get_fallback_llm(temperature: float = 0.1, max_retries: int = 1):
             api_key=settings.openrouter_api_key,
             base_url="https://openrouter.ai/api/v1",
             temperature=temperature,
-            max_retries=max_retries
+            max_retries=0,
+            default_headers={
+                "HTTP-Referer": "http://127.0.0.1:5173",
+                "X-Title": "HireFlow",
+                "OpenRouter-Routing": "fallback" # Hint to minimize costs
+            }
         )
         fallbacks.append(openrouter)
         
     if fallbacks:
-        return gemini.with_fallbacks(fallbacks)
+        # LangChain with_fallbacks cascades sequentially: Gemini -> Groq -> OpenRouter
+        # Catching Exception guarantees ANY error (including RateLimitError 429) advances the chain.
+        return gemini.with_fallbacks(fallbacks, exceptions_to_handle=(Exception,))
     
     return gemini
 
