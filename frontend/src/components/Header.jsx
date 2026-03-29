@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Sun, Moon, Zap, LayoutDashboard, Search, Briefcase, ClipboardList, Wand2, LogOut, ArrowRight } from 'lucide-react';
+import { Sun, Moon, Zap, LayoutDashboard, Search, Briefcase, ClipboardList, Wand2, LogOut, ArrowRight, User as UserIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 export default function Header({ user, onLogout, publicMode = false }) {
@@ -28,13 +28,15 @@ export default function Header({ user, onLogout, publicMode = false }) {
 
     const navLinks = [
         { path: '/tailor', label: 'Tailor Resume' },
-        { path: '/applications', label: 'Applications' }
+        { path: '/applications', label: 'Applications' },
+        { path: '/profile', label: 'Profile Builder' }
     ];
 
     // Mobile bottom nav — 1 primary (Tailor)
     const mobileNav = [
         { path: '/tailor', label: 'Tailor', icon: <Wand2 size={20} />, primary: true },
-        { path: '/applications', label: 'Applications', icon: <LayoutDashboard size={20} /> }
+        { path: '/applications', label: 'Applications', icon: <LayoutDashboard size={20} /> },
+        { path: '/profile', label: 'Profile', icon: <UserIcon size={20} /> }
     ];
 
     const isActive = (path) => {

@@ -26,6 +26,9 @@ export const api = {
 
     // Auth
     me: () => request('/auth/me'),
+    getProfile: () => request('/profile'),
+    updateProfile: (data) => request('/profile', { method: 'PUT', body: JSON.stringify(data) }),
+    parseProfile: (formData) => request('/profile/parse', { method: 'POST', body: formData, headers: {} }),
     signup: (data) => request('/auth/signup', { method: 'POST', body: JSON.stringify(data) }),
     login: (data) => request('/auth/login', { method: 'POST', body: JSON.stringify(data) }),
     logout: () => request('/auth/logout', { method: 'POST' }),

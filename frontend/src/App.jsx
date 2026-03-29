@@ -6,6 +6,7 @@ import Tailor from './pages/Tailor';
 import Dashboard from './pages/Dashboard';
 import Auth from './pages/Auth';
 import Landing from './pages/Landing';
+import Profile from './pages/Profile';
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { CheckCircle, AlertCircle, Info } from 'lucide-react';
 import api from './services/api';
@@ -107,6 +108,7 @@ function AppShell() {
                     <Route path="/" element={<Landing user={user} />} />
                     <Route path="/tailor" element={user ? <Tailor addToast={addToast} /> : <Navigate to={`/login?next=${encodeURIComponent(location.pathname)}`} replace />} />
                     <Route path="/applications" element={user ? <Dashboard addToast={addToast} /> : <Navigate to={`/login?next=${encodeURIComponent(location.pathname)}`} replace />} />
+                    <Route path="/profile" element={user ? <Profile addToast={addToast} /> : <Navigate to={`/login?next=${encodeURIComponent(location.pathname)}`} replace />} />
                     <Route path="*" element={<Navigate to={user ? '/tailor' : '/'} replace />} />
                 </Routes>
             </main>

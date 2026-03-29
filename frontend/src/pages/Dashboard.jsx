@@ -207,8 +207,20 @@ export default function Dashboard({ addToast }) {
 
             {/* Resume Viewer Modal */}
             {viewingResume && (
-                <div className="modal-overlay no-print" onClick={() => { setViewingResume(null); setViewingJob(null); }} style={{ padding: 0, backgroundColor: 'var(--bg-body)' }}>
-                    <div className="modal-content resume-viewer-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '100%', width: '100vw', height: '100vh', maxHeight: '100vh', margin: 0, borderRadius: 0, border: 'none', display: 'flex', flexDirection: 'column' }}>
+                <div className="modal-overlay no-print" onClick={() => { setViewingResume(null); setViewingJob(null); }} style={{ padding: '32px', backgroundColor: 'rgba(0, 0, 0, 0.65)', backdropFilter: 'blur(4px)' }}>
+                    <div className="modal-content resume-viewer-modal" onClick={e => e.stopPropagation()} style={{ 
+                        maxWidth: '1400px', 
+                        width: '100%', 
+                        height: '100%', 
+                        margin: '0 auto', 
+                        borderRadius: '16px', 
+                        border: '1px solid var(--border)', 
+                        boxShadow: '0 24px 48px rgba(0,0,0,0.5)', 
+                        display: 'flex', 
+                        flexDirection: 'column',
+                        overflow: 'hidden',
+                        backgroundColor: 'var(--bg-surface)'
+                    }}>
                         <div style={{ padding: '20px 32px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'var(--bg-card)' }}>
                             <div>
                                 <h3 style={{ margin: 0, fontSize: 18 }}>{viewingApp?.company}</h3>
@@ -218,7 +230,8 @@ export default function Dashboard({ addToast }) {
                                 <button className="btn btn-primary" onClick={() => {
                                     const originalTitle = document.title;
                                     const originalPath = window.location.pathname;
-                                    document.title = '\u200B'; // zero width space
+                                    const candidateName = viewingResume?.personal_info?.name ? viewingResume.personal_info.name.replace(/\s+/g, '_') : 'Candidate';
+                                    document.title = `${candidateName}_Resume`; 
                                     window.history.replaceState(null, '', '/');
                                     
                                     setTimeout(() => {

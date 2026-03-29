@@ -254,6 +254,80 @@ async def get_me(request: Request):
     return _serialize_user(user)
 
 
+@app.get("/api/profile")
+async def get_profile(current_user: User = Depends(require_current_user)):
+    """Get the user's master resume profile data."""
+    try:
+        with open(settings.master_resume_path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except FileNotFoundError:
+        return {}
+
+
+@app.put("/api/profile")
+async def update_profile(request: Request, current_user: User = Depends(require_current_user)):
+    """Update the user's master resume profile data."""
+    try:
+        data = await request.json()
+        settings.master_resume_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(settings.master_resume_path, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2)
+            
+        # Also store it in vector db for agent context retrieval!
+        from stitchcv.models.vector_db import store_resume_in_vector_db
+        try:
+            await store_resume_in_vector_db(data, "master_resume_builder")
+        except Exception as e:
+            logger.warning(f"Metadata vector sync failed: {e}")
+            
+        return {"status": "success"}
+    except Exception as e:
+        raise HTTPException(500, f"Failed to save profile: {e}")
+
+
+@app.post("/api/profile/parse")
+async def parse_profile(
+    file: Optional[UploadFile] = File(None),
+    text: Optional[str] = Form(None),
+    current_user: User = Depends(require_current_user)
+):
+    """Parse an uploaded resume file (PDF/DOCX/TXT) or raw text into the structured Profile JSON."""
+    from stitchcv.workflows.resume_tailor_graph import parse_resume_to_json
+    from stitchcv.utils.document_parser import extract_text_from_pdf, extract_text_from_docx
+
+    if not file and not text:
+        raise HTTPException(400, "Must provide either a file or raw text.")
+
+    try:
+        resume_text = ""
+        master_resume_json = None
+
+        if file:
+            content = await file.read()
+            filename = file.filename.lower()
+            if filename.endswith(".json"):
+                master_resume_json = json.loads(content.decode("utf-8"))
+            elif filename.endswith(".pdf"):
+                resume_text = extract_text_from_pdf(content)
+            elif filename.endswith(".docx"):
+                resume_text = extract_text_from_docx(content)
+            else:
+                resume_text = content.decode("utf-8")
+        elif text:
+            resume_text = text
+
+        if not master_resume_json and resume_text:
+            master_resume_json = await parse_resume_to_json(resume_text)
+
+        if not master_resume_json:
+            raise HTTPException(400, "Could not extract profile data from input.")
+
+        return master_resume_json
+    except Exception as e:
+        logger.error(f"Profile Parse Failed: {e}")
+        raise HTTPException(500, f"Failed to parse resume: {str(e)}")
+
+
 @app.post("/api/auth/signup", response_model=AuthUserResponse)
 async def signup(payload: SignupRequest, response: Response):
     """Create a local account and start a session."""
