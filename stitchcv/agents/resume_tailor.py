@@ -21,33 +21,8 @@ class ResumeTailorAgent(BaseAgent):
 
     def __init__(self):
         super().__init__("ResumeTailor")
-        self._master_resume: dict[str, Any] | None = None
 
-    def load_master_resume(self, path: Path | None = None) -> dict[str, Any]:
-        """Load the master resume from file.
-
-        Args:
-            path: Path to resume file (defaults to settings)
-
-        Returns:
-            Master resume dictionary
-        """
-        resume_path = path or settings.master_resume_path
-
-        if not resume_path.exists():
-            raise FileNotFoundError(f"Master resume not found: {resume_path}")
-
-        with open(resume_path) as f:
-            self._master_resume = json.load(f)
-            self.logger.info(f"Loaded master resume from {resume_path}")
-            return self._master_resume
-
-    @property
-    def master_resume(self) -> dict[str, Any]:
-        """Get or load the master resume."""
-        if self._master_resume is None:
-            self.load_master_resume()
-        return self._master_resume
+    # Deprecated: Agents now load user data directly from DB per-request.
 
     async def run(
         self,
@@ -75,14 +50,22 @@ class ResumeTailorAgent(BaseAgent):
                 "nice_to_have_keywords": job.nice_to_have_keywords or [],
             }
 
+        # Load master resume from user's database record
+        async with get_session() as session:
+            from stitchcv.models.user import User
+            user = await session.get(User, job.user_id)
+            if not user or not user.profile_data:
+                raise ValueError(f"User profile data is missing for user_id={job.user_id}")
+            master_resume = user.profile_data
+
         # Tailor the resume using LangGraph
         resume_id = str(uuid.uuid4())
         try:
-            await store_resume_in_vector_db(self.master_resume, resume_id)
+            await store_resume_in_vector_db(master_resume, f"resume_{job.user_id}_{resume_id}")
         except Exception as e:
             self.logger.warning(f"Vector DB storage failed: {e}")
             
-        tailored = await run_resume_tailor_graph(job.job_description, resume_id)
+        tailored = await run_resume_tailor_graph(job.job_description, resume_id, master_resume)
 
         # Save the tailored resume
         await self._save_tailored_resume(job, tailored)

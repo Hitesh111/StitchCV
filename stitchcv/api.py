@@ -224,16 +224,7 @@ async def startup():
     application_agent = ApplicationAgent()
     logging_agent = LoggingMemoryAgent()
 
-    # Try loading user data (non-fatal if missing)
-    try:
-        tailor_agent.load_master_resume()
-    except FileNotFoundError:
-        logger.warning("Master resume not found - configure data/master_resume.json")
-
-    try:
-        application_agent.load_profile()
-    except FileNotFoundError:
-        logger.warning("Profile not found - configure data/profile.json")
+    # Agents load user data per-request, so we no longer load a global file here.
 
 
 # --- API routes ---
@@ -257,11 +248,9 @@ async def get_me(request: Request):
 @app.get("/api/profile")
 async def get_profile(current_user: User = Depends(require_current_user)):
     """Get the user's master resume profile data."""
-    try:
-        with open(settings.master_resume_path, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except FileNotFoundError:
-        return {}
+    if current_user.profile_data:
+        return current_user.profile_data
+    return {}
 
 
 @app.put("/api/profile")
@@ -269,14 +258,16 @@ async def update_profile(request: Request, current_user: User = Depends(require_
     """Update the user's master resume profile data."""
     try:
         data = await request.json()
-        settings.master_resume_path.parent.mkdir(parents=True, exist_ok=True)
-        with open(settings.master_resume_path, "w", encoding="utf-8") as f:
-            json.dump(data, f, indent=2)
+        
+        async with get_session() as session:
+            user = await session.get(User, current_user.id)
+            user.profile_data = data
+            await session.commit()
             
         # Also store it in vector db for agent context retrieval!
         from stitchcv.models.vector_db import store_resume_in_vector_db
         try:
-            await store_resume_in_vector_db(data, "master_resume_builder")
+            await store_resume_in_vector_db(data, f"master_resume_{current_user.id}")
         except Exception as e:
             logger.warning(f"Metadata vector sync failed: {e}")
             

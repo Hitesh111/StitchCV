@@ -72,9 +72,6 @@ class Settings(BaseSettings):
 
     # Paths
     data_dir: Path = Field(default=Path("data"), description="Data directory")
-    master_resume_path: Path = Field(
-        default=Path("data/master_resume.json"), description="Master resume file"
-    )
     profile_path: Path = Field(default=Path("data/profile.json"), description="User profile file")
     tailored_resumes_dir: Path = Field(
         default=Path("data/tailored_resumes"), description="Tailored resumes directory"

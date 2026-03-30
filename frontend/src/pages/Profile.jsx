@@ -25,8 +25,17 @@ export default function Profile({ addToast }) {
         api.getProfile()
             .then(data => {
                 if (data && Object.keys(data).length > 0) {
+                    const links = data.personal_info?.links || [];
                     setProfile({
-                        personal_info: data.personal_info || { name: '', email: '', phone: '', linkedin: '', github: '', portfolio: '' },
+                        personal_info: { 
+                            name: data.personal_info?.name || '', 
+                            email: data.personal_info?.email || '', 
+                            phone: data.personal_info?.phone || '', 
+                            linkedin: links.find(l => l.includes('linkedin')) || '', 
+                            github: links.find(l => l.includes('github')) || '', 
+                            portfolio: links.find(l => !l.includes('linkedin') && !l.includes('github')) || '',
+                            links: links
+                        },
                         summary: data.summary || '',
                         skills: data.skills || [],
                         experience: data.experience || [],
@@ -43,7 +52,16 @@ export default function Profile({ addToast }) {
     const handleSave = async () => {
         setIsSaving(true);
         try {
-            await api.updateProfile(profile);
+            const profileToSave = { ...profile };
+            profileToSave.personal_info = {
+                ...profile.personal_info,
+                links: [
+                    profile.personal_info.linkedin,
+                    profile.personal_info.github,
+                    profile.personal_info.portfolio
+                ].filter(Boolean)
+            };
+            await api.updateProfile(profileToSave);
             addToast('Profile saved successfully! Ready for AI tailoring.', 'success');
         } catch (e) {
             addToast('Failed to save profile: ' + e.message, 'error');
@@ -64,8 +82,16 @@ export default function Profile({ addToast }) {
             const parsedData = await api.parseProfile(formData);
             
             if (parsedData) {
+                const links = parsedData.personal_info?.links || [];
                 setProfile(prev => ({
-                    personal_info: { ...prev.personal_info, ...(parsedData.personal_info || {}) },
+                    personal_info: { 
+                        ...prev.personal_info, 
+                        ...parsedData.personal_info,
+                        linkedin: links.find(l => l.includes('linkedin')) || prev.personal_info.linkedin, 
+                        github: links.find(l => l.includes('github')) || prev.personal_info.github, 
+                        portfolio: links.find(l => !l.includes('linkedin') && !l.includes('github')) || prev.personal_info.portfolio,
+                        links: links 
+                    },
                     summary: parsedData.summary || prev.summary,
                     skills: parsedData.skills || prev.skills,
                     experience: parsedData.experience?.length ? parsedData.experience : prev.experience,
@@ -242,7 +268,7 @@ export default function Profile({ addToast }) {
                                 <h3 style={{ margin: 0, fontSize: 18, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 8 }}>
                                     <Briefcase size={20} color="var(--blue)" /> Work Experience
                                 </h3>
-                                <button className="btn btn-sm btn-secondary" onClick={() => addArrayItem('experience', { company: '', role: '', duration: '', location: '', responsibilities: [] })}>
+                                <button className="btn btn-sm btn-secondary" onClick={() => addArrayItem('experience', { company: '', title: '', date: '', location: '', description: [] })}>
                                     <Plus size={14} /> Add Role
                                 </button>
                             </div>
@@ -270,11 +296,11 @@ export default function Profile({ addToast }) {
                                                 </div>
                                                 <div className="form-group" style={{ margin: 0 }}>
                                                     <label className="form-label">Role Title</label>
-                                                    <input className="form-input" value={exp.role || ''} onChange={e => updateArrayItem('experience', idx, 'role', e.target.value)} placeholder="Senior Software Engineer" />
+                                                    <input className="form-input" value={exp.title || ''} onChange={e => updateArrayItem('experience', idx, 'title', e.target.value)} placeholder="Senior Software Engineer" />
                                                 </div>
                                                 <div className="form-group" style={{ margin: 0 }}>
                                                     <label className="form-label">Duration</label>
-                                                    <input className="form-input" value={exp.duration || ''} onChange={e => updateArrayItem('experience', idx, 'duration', e.target.value)} placeholder="Jan 2020 - Present" />
+                                                    <input className="form-input" value={exp.date || ''} onChange={e => updateArrayItem('experience', idx, 'date', e.target.value)} placeholder="Jan 2020 - Present" />
                                                 </div>
                                                 <div className="form-group" style={{ margin: 0 }}>
                                                     <label className="form-label">Location</label>
@@ -287,8 +313,8 @@ export default function Profile({ addToast }) {
                                                     className="form-input" 
                                                     rows={5}
                                                     placeholder="Developed microservices...&#10;Lead a team of 4 engineers...&#10;Increased revenue by 15%..."
-                                                    value={(exp.responsibilities || []).join('\n')}
-                                                    onChange={e => handleBulletsChange('experience', idx, 'responsibilities', e.target.value)}
+                                                    value={(exp.description || []).join('\n')}
+                                                    onChange={e => handleBulletsChange('experience', idx, 'description', e.target.value)}
                                                 />
                                             </div>
                                         </div>
@@ -305,7 +331,7 @@ export default function Profile({ addToast }) {
                                 <h3 style={{ margin: 0, fontSize: 18, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 8 }}>
                                     <GraduationCap size={20} color="var(--blue)" /> Education
                                 </h3>
-                                <button className="btn btn-sm btn-secondary" onClick={() => addArrayItem('education', { institution: '', degree: '', duration: '', location: '', gpa: '', details: [] })}>
+                                <button className="btn btn-sm btn-secondary" onClick={() => addArrayItem('education', { institution: '', degree: '', date: '', location: '', gpa: '', details: [] })}>
                                     <Plus size={14} /> Add Education
                                 </button>
                             </div>
@@ -337,7 +363,7 @@ export default function Profile({ addToast }) {
                                                 </div>
                                                 <div className="form-group" style={{ margin: 0 }}>
                                                     <label className="form-label">Duration</label>
-                                                    <input className="form-input" value={edu.duration || ''} onChange={e => updateArrayItem('education', idx, 'duration', e.target.value)} placeholder="Aug 2016 - May 2020" />
+                                                    <input className="form-input" value={edu.date || ''} onChange={e => updateArrayItem('education', idx, 'date', e.target.value)} placeholder="Aug 2016 - May 2020" />
                                                 </div>
                                                 <div className="form-group" style={{ margin: 0 }}>
                                                     <label className="form-label">GPA (Optional)</label>
@@ -367,7 +393,7 @@ export default function Profile({ addToast }) {
                                 <h3 style={{ margin: 0, fontSize: 18, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 8 }}>
                                     <Code size={20} color="var(--blue)" /> Portfolio Projects
                                 </h3>
-                                <button className="btn btn-sm btn-secondary" onClick={() => addArrayItem('projects', { name: '', description: '', link: '', technologies: [], highlights: [] })}>
+                                <button className="btn btn-sm btn-secondary" onClick={() => addArrayItem('projects', { name: '', description: '', link: '', technologies: [] })}>
                                     <Plus size={14} /> Add Project
                                 </button>
                             </div>
@@ -408,17 +434,12 @@ export default function Profile({ addToast }) {
                                                 </div>
                                             </div>
                                             <div className="form-group" style={{ margin: 0 }}>
-                                                <label className="form-label">Highlights / Description (One bullet per line)</label>
+                                                <label className="form-label">Description</label>
                                                 <textarea 
                                                     className="form-input" 
                                                     rows={4}
-                                                    value={(proj.highlights || [proj.description].filter(Boolean)).join('\n')}
-                                                    onChange={e => {
-                                                        const bullets = e.target.value.split('\n').filter(line => line.trim().length > 0);
-                                                        const newArray = [...profile.projects];
-                                                        newArray[idx] = { ...newArray[idx], highlights: bullets, description: bullets[0] || '' };
-                                                        setProfile(prev => ({ ...prev, projects: newArray }));
-                                                    }}
+                                                    value={proj.description || ''}
+                                                    onChange={e => updateArrayItem('projects', idx, 'description', e.target.value)}
                                                 />
                                             </div>
                                         </div>

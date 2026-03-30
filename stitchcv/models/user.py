@@ -9,7 +9,7 @@ if TYPE_CHECKING:
     from stitchcv.models.job import Job
     from stitchcv.models.application import Application
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, String, UniqueConstraint, func
+from sqlalchemy import Boolean, DateTime, ForeignKey, String, UniqueConstraint, func, JSON
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from stitchcv.models.database import Base
@@ -27,6 +27,7 @@ class User(Base):
     avatar_url: Mapped[Optional[str]] = mapped_column(String(2048), nullable=True)
     credits: Mapped[int] = mapped_column(default=3)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    profile_data: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, server_default=func.now(), onupdate=func.now()
