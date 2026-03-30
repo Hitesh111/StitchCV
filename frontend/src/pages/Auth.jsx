@@ -53,11 +53,6 @@ export default function Auth({ mode = 'login', addToast, onAuthenticated }) {
                     </p>
                     <div className="auth-highlights">
                         <div className="auth-highlight-card">
-                            <span className="label-caps">Auth model</span>
-                            <strong>Session-based access</strong>
-                            <p>Email/password plus Google and LinkedIn sign-in.</p>
-                        </div>
-                        <div className="auth-highlight-card">
                             <span className="label-caps">Workspace scope</span>
                             <strong>One account, one pipeline</strong>
                             <p>Jobs, tailored resumes, and application progress stay tied to a single identity.</p>
