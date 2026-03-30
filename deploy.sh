@@ -21,8 +21,16 @@ rsync -avz --exclude 'node_modules' \
            --exclude '.pytest_cache' \
            ./ stichcv-server:~/stitchcv-deployment/
 
+echo "Configuring production environment variables on EC2..."
+ssh stichcv-server "cd ~/stitchcv-deployment && \
+    grep -q '^APP_BASE_URL=' .env || echo 'APP_BASE_URL=https://stitchcv.in' >> .env && \
+    grep -q '^FRONTEND_BASE_URL=' .env || echo 'FRONTEND_BASE_URL=https://stitchcv.in' >> .env && \
+    sed -i -e 's|^APP_BASE_URL=.*|APP_BASE_URL=https://stitchcv.in|' .env && \
+    sed -i -e 's|^FRONTEND_BASE_URL=.*|FRONTEND_BASE_URL=https://stitchcv.in|' .env"
+
 echo "Building and starting Docker containers on EC2..."
 ssh stichcv-server "cd ~/stitchcv-deployment && \
+    docker system prune -af && \
     docker-compose -f docker-compose.prod.yml down && \
     docker-compose -f docker-compose.prod.yml up --build -d"
 
