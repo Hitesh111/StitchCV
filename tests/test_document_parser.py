@@ -30,9 +30,13 @@ def test_extract_job_description_from_html_prefers_description_blocks():
     assert "Ignore navigation" not in extracted
 
 
+from unittest.mock import patch
+
 @pytest.mark.asyncio
 async def test_extract_job_description_from_url_rejects_linkedin_listing_pages():
-    with pytest.raises(ValueError, match="direct LinkedIn job URL"):
-        await extract_job_description_from_url(
-            "https://www.linkedin.com/jobs/collections/recommended/"
-        )
+    with patch('stitchcv.scrapers.linkedin_scraper.LinkedInScraper.get_job_details') as mock_scrape:
+        mock_scrape.return_value = {}  # Mock empty details
+        with pytest.raises(ValueError, match="Could not read a job description"):
+            await extract_job_description_from_url(
+                "https://www.linkedin.com/jobs/collections/recommended/"
+            )

@@ -1,7 +1,13 @@
 #!/bin/bash
 set -e
 
-echo "Syncing repository to EC2 instance (stichcv-server)..."
+echo "Running Frontend test suite..."
+cd frontend && npm run test && cd ..
+
+echo "Running Backend test suite..."
+source .venv/bin/activate && pytest tests/
+
+echo "Tests passed! Syncing repository to EC2 instance (stichcv-server)..."
 # Create deployment directory on remote first
 ssh stichcv-server "mkdir -p ~/stitchcv-deployment"
 

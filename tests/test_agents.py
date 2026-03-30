@@ -147,7 +147,7 @@ class TestResumeTailor:
             "summary": "hi"
         }
 
-        agent._master_resume = master
+        # No need for agent assignment as method takes args directly
         
         issues = agent.validate_no_hallucination(master, tailored)
 
