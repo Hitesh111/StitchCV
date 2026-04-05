@@ -375,54 +375,123 @@ export default function Tailor({ addToast }) {
                         ) : tailoredResume && (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
                                 
-                                {/* Top Row: Score Cards side-by-side */}
-                                {(inputScores || outputScores) && (
-                                    <div className="score-grid">
-                                        {/* Original ATS Card */}
-                                        {inputScores && (
-                                            <div className="ats-card original">
-                                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-                                                    <div className="label-caps">Original Resume</div>
-                                                    <div style={{ fontSize: 18, fontWeight: 800 }}>{Math.round(Object.values(inputScores).reduce((a,b)=>a+b,0)/4)}%</div>
-                                                </div>
-                                                {Object.entries(inputScores).map(([k, v]) => (
-                                                    <div key={k} style={{ marginBottom: 12 }}>
-                                                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, marginBottom: 4, color: 'var(--text-secondary)' }}>
-                                                            <span style={{textTransform:'capitalize'}}>{k.replace('_', ' ')}</span>
-                                                            <span>{v}%</span>
-                                                        </div>
-                                                        <div className="score-track"><div className="score-fill neutral" style={{ width: `${v}%` }}/></div>
-                                                    </div>
-                                                ))}
+                                {/* Score Comparison Panel */}
+                                {(inputScores || outputScores) && (() => {
+                                    const origTotal = inputScores ? Math.round(Object.values(inputScores).reduce((a,b)=>a+b,0)/4) : null;
+                                    const newTotal = outputScores ? Math.round(Object.values(outputScores).reduce((a,b)=>a+b,0)/4) : null;
+                                    const totalDelta = (origTotal !== null && newTotal !== null) ? newTotal - origTotal : null;
+                                    const metrics = outputScores ? Object.keys(outputScores) : (inputScores ? Object.keys(inputScores) : []);
+                                    return (
+                                        <div style={{
+                                            backgroundColor: 'var(--bg-card)',
+                                            border: '1px solid var(--border)',
+                                            borderRadius: 'var(--radius-card)',
+                                            overflow: 'hidden'
+                                        }}>
+                                            {/* Header row */}
+                                            <div style={{
+                                                display: 'grid',
+                                                gridTemplateColumns: '1fr 90px 90px 56px',
+                                                gap: 0,
+                                                padding: '14px 20px',
+                                                borderBottom: '1px solid var(--border)',
+                                                backgroundColor: 'var(--bg-surface)',
+                                            }}>
+                                                <span className="label-caps" style={{ alignSelf: 'center' }}>Metric</span>
+                                                <span className="label-caps" style={{ textAlign: 'right', alignSelf: 'center' }}>Original</span>
+                                                <span className="label-caps" style={{ textAlign: 'right', alignSelf: 'center', color: 'var(--amber-deep)' }}>Tailored</span>
+                                                <span className="label-caps" style={{ textAlign: 'right', alignSelf: 'center' }}>Δ</span>
                                             </div>
-                                        )}
 
-                                        {/* Tailored ATS Card */}
-                                        {outputScores && (
-                                            <div className="ats-card tailored">
-                                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-                                                    <div className="label-caps" style={{ color: 'var(--yellow-dark)' }}>Tailored Match</div>
-                                                    <div style={{ fontSize: 18, fontWeight: 800 }}>{Math.round(Object.values(outputScores).reduce((a,b)=>a+b,0)/4)}%</div>
-                                                </div>
-                                                {Object.entries(outputScores).map(([k, v]) => {
-                                                    const origV = inputScores ? inputScores[k] : 0;
-                                                    const diff = v - origV;
-                                                    return (
-                                                    <div key={k} style={{ marginBottom: 12 }}>
-                                                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, marginBottom: 4 }}>
-                                                            <span style={{textTransform:'capitalize', fontWeight: 600}}>{k.replace('_', ' ')}</span>
-                                                            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                                                                {diff > 0 && <span style={{ color: 'var(--success)' }}>+{diff}</span>}
-                                                                <span style={{ fontWeight: 600 }}>{v}%</span>
+                                            {/* Metric rows */}
+                                            {metrics.map((k) => {
+                                                const orig = inputScores ? (inputScores[k] ?? 0) : null;
+                                                const next = outputScores ? (outputScores[k] ?? 0) : null;
+                                                const delta = (orig !== null && next !== null) ? next - orig : null;
+                                                const label = k.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+                                                return (
+                                                    <div key={k} style={{
+                                                        display: 'grid',
+                                                        gridTemplateColumns: '1fr 90px 90px 56px',
+                                                        gap: 0,
+                                                        padding: '16px 20px',
+                                                        borderBottom: '1px solid var(--border)',
+                                                        alignItems: 'center',
+                                                    }}>
+                                                        {/* Label + bar stack */}
+                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, paddingRight: 16 }}>
+                                                            <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>{label}</span>
+                                                            <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                                                                {orig !== null && (
+                                                                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                                                        <div style={{ height: 3, flex: 1, backgroundColor: 'var(--border)', borderRadius: 2, overflow: 'hidden' }}>
+                                                                            <div className="score-fill neutral" style={{ width: `${orig}%` }} />
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+                                                                {next !== null && (
+                                                                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                                                        <div style={{ height: 3, flex: 1, backgroundColor: 'var(--border)', borderRadius: 2, overflow: 'hidden' }}>
+                                                                            <div className="score-fill yellow" style={{ width: `${next}%` }} />
+                                                                        </div>
+                                                                    </div>
+                                                                )}
                                                             </div>
                                                         </div>
-                                                        <div className="score-track"><div className="score-fill yellow" style={{ width: `${v}%` }}/></div>
+
+                                                        {/* Original % */}
+                                                        <div style={{ textAlign: 'right', fontSize: 13, color: 'var(--text-muted)', fontVariantNumeric: 'tabular-nums' }}>
+                                                            {orig !== null ? `${orig}%` : '—'}
+                                                        </div>
+
+                                                        {/* Tailored % */}
+                                                        <div style={{ textAlign: 'right', fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums' }}>
+                                                            {next !== null ? `${next}%` : '—'}
+                                                        </div>
+
+                                                        {/* Delta */}
+                                                        <div style={{
+                                                            textAlign: 'right',
+                                                            fontSize: 12,
+                                                            fontWeight: 700,
+                                                            fontVariantNumeric: 'tabular-nums',
+                                                            color: delta === null ? 'var(--text-muted)' : delta > 0 ? 'var(--success)' : delta < 0 ? 'var(--error)' : 'var(--text-muted)'
+                                                        }}>
+                                                            {delta === null ? '—' : delta > 0 ? `+${delta}` : delta === 0 ? '=' : `${delta}`}
+                                                        </div>
                                                     </div>
-                                                )})}
+                                                );
+                                            })}
+
+                                            {/* Footer: overall totals */}
+                                            <div style={{
+                                                display: 'grid',
+                                                gridTemplateColumns: '1fr 90px 90px 56px',
+                                                gap: 0,
+                                                padding: '16px 20px',
+                                                backgroundColor: totalDelta !== null && totalDelta > 0 ? 'rgba(34,197,94,0.06)' : 'var(--bg-surface)',
+                                                alignItems: 'center',
+                                            }}>
+                                                <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Overall Score</span>
+                                                <div style={{ textAlign: 'right', fontSize: 16, fontWeight: 800, color: 'var(--text-muted)', fontVariantNumeric: 'tabular-nums' }}>
+                                                    {origTotal !== null ? `${origTotal}%` : '—'}
+                                                </div>
+                                                <div style={{ textAlign: 'right', fontSize: 16, fontWeight: 800, color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums' }}>
+                                                    {newTotal !== null ? `${newTotal}%` : '—'}
+                                                </div>
+                                                <div style={{
+                                                    textAlign: 'right',
+                                                    fontSize: 13,
+                                                    fontWeight: 800,
+                                                    fontVariantNumeric: 'tabular-nums',
+                                                    color: totalDelta === null ? 'var(--text-muted)' : totalDelta > 0 ? 'var(--success)' : totalDelta < 0 ? 'var(--error)' : 'var(--text-muted)'
+                                                }}>
+                                                    {totalDelta === null ? '—' : totalDelta > 0 ? `+${totalDelta}` : totalDelta === 0 ? '=' : `${totalDelta}`}
+                                                </div>
                                             </div>
-                                        )}
-                                    </div>
-                                )}
+                                        </div>
+                                    );
+                                })()}
 
                                 {/* Full-width Resume Preview */}
                                 <div style={{ 
