@@ -132,21 +132,23 @@ export default function Tailor({ addToast }) {
 
 
 
-    const handleDownloadJson = () => {
-        if (!tailoredResume) return;
-        const payload = {
-            job_description: jdText || fetchedJd || 'Job description from file',
-            resume: tailoredResume
+    const handleDownloadPdf = async () => {
+        if (!tailoredResume || !pdfRef.current) return;
+        const html2pdf = (await import('html2pdf.js')).default;
+        const candidateName = tailoredResume?.personal_info?.name
+            ? tailoredResume.personal_info.name.replace(/\s+/g, '_')
+            : 'Tailored_Resume';
+        const opt = {
+            margin:       0,
+            filename:     `${candidateName}_Resume.pdf`,
+            image:        { type: 'jpeg', quality: 0.98 },
+            html2canvas:  { scale: 2, useCORS: true, logging: false },
+            jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' },
+            pagebreak:    { mode: ['avoid-all', 'css', 'legacy'] },
         };
-        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'tailored_resume.json';
-        a.click();
-        URL.revokeObjectURL(url);
-        addToast('JSON downloaded successfully!', 'success');
+        html2pdf().set(opt).from(pdfRef.current).save();
     };
+
 
     const isReady = (resumeInputMode === 'file' ? !!resumeFile : !!resumeText.trim()) &&
                     (jdInputMode === 'file' ? !!jdFile : jdInputMode === 'url' ? !!jdUrl.trim() : !!jdText.trim());
@@ -295,17 +297,20 @@ export default function Tailor({ addToast }) {
             {/* Workflow Step Dots & Generate */}
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: 40 }}>
                 <div className="step-dot-row" style={{ marginBottom: 32 }}>
+                    {/* Step 1: Inputs - always done */}
                     <div className="step-item done">
                         <div className="step-dot"><Check size={14} /></div>
                         <div className="step-line" />
                         <div className="step-label">INPUTS</div>
                     </div>
+                    {/* Step 2: Processing */}
                     <div className={`step-item ${status === 'current' ? 'current' : status === 'done' ? 'done' : 'pending'}`}>
                         <div className="step-dot">{status === 'done' ? <Check size={14} /> : status === 'current' ? <Settings size={14} className="spin-icon" style={{color: '#1C1917'}}/> : <span style={{width: 6, height: 6, borderRadius: '50%', backgroundColor: 'var(--border)'}}/>}</div>
                         <div className="step-line" />
                         <div className="step-label">PROCESSING</div>
                     </div>
-                    <div className={`step-item ${status === 'done' ? 'current' : 'pending'}`} style={{ width: 40 }}>
+                    {/* Step 3: Result — no step-line (last step) */}
+                    <div className={`step-item ${status === 'done' ? 'current' : 'pending'}`}>
                         <div className="step-dot">{status === 'done' ? <FileText size={14} style={{color: '#1C1917'}}/> : <span style={{width: 6, height: 6, borderRadius: '50%', backgroundColor: 'var(--border)'}}/>}</div>
                         <div className="step-label">RESULT</div>
                     </div>
@@ -333,8 +338,8 @@ export default function Tailor({ addToast }) {
                                 </button>
                             )}
                             {tailoredResume && (
-                                <button className="btn btn-primary btn-sm" onClick={handleDownloadJson}>
-                                    <Download size={14} color="#1C1917"/> Download JSON
+                                <button className="btn btn-primary btn-sm" onClick={handleDownloadPdf}>
+                                    <Download size={14} color="#1C1917"/> Download PDF
                                 </button>
                             )}
                         </div>
