@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { FileText, Briefcase, Calendar, X, Printer, Eye, Trash2, Edit } from 'lucide-react';
+import { FileText, Briefcase, Calendar, X, Printer, Eye, Trash2, Edit, ArrowRight } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import api from '../services/api';
 import ResumeTemplate from '../components/ResumeTemplate';
 
@@ -87,9 +88,12 @@ export default function Dashboard({ addToast }) {
                         <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>Loading your dashboard...</div>
                     ) : applications.length === 0 ? (
                         <div className="empty-state">
-                            <FileText size={40} style={{ color: 'var(--text-muted)', marginBottom: 16 }} />
-                            <h3>No applications yet</h3>
-                            <p>Go to the Tailor view to craft your first customized resume.</p>
+                            <FileText size={36} style={{ color: 'var(--text-muted)', marginBottom: 14, opacity: 0.5 }} />
+                            <h3 style={{ marginBottom: 6 }}>No applications yet</h3>
+                            <p style={{ marginBottom: 20, maxWidth: 280, textAlign: 'center' }}>Craft your first AI-tailored resume and it will appear here.</p>
+                            <Link to="/tailor" className="btn btn-primary" style={{ gap: 8 }}>
+                                Go to Tailor <ArrowRight size={14} />
+                            </Link>
                         </div>
                     ) : (
                         <div className="table-responsive" style={{ backgroundColor: 'var(--bg-card)', borderRadius: 'var(--radius-card)', border: '1px solid var(--border)'}}>
@@ -104,7 +108,9 @@ export default function Dashboard({ addToast }) {
                                 </thead>
                                 <tbody>
                                     {applications.map(app => (
-                                        <tr key={app.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                                        <tr key={app.id} style={{ borderBottom: '1px solid var(--border)', transition: 'background 120ms ease', cursor: 'default' }}
+                                            onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-surface)'}
+                                            onMouseLeave={e => e.currentTarget.style.background = ''}>
                                             <td style={{ padding: '20px 24px', whiteSpace: 'nowrap', color: 'var(--text-secondary)' }}>
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                                                     <Calendar size={14} />

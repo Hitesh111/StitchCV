@@ -176,8 +176,8 @@ export default function Tailor({ addToast }) {
                     </div>
                     <div className="hero-process-card">
                         <span className="label-caps">Output</span>
-                        <strong>Preview + JSON</strong>
-                        <p>Review the tailored result before exporting.</p>
+                        <strong>Preview + PDF Export</strong>
+                        <p>Review the tailored result and download your PDF.</p>
                     </div>
                 </div>
             </div>
@@ -296,7 +296,7 @@ export default function Tailor({ addToast }) {
 
             {/* Workflow Step Dots & Generate */}
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: 40 }}>
-                <div className="step-dot-row" style={{ marginBottom: 32 }}>
+                <div className="step-dot-row" style={{ marginBottom: 20 }}>
                     {/* Step 1: Inputs - always done */}
                     <div className="step-item done">
                         <div className="step-dot"><Check size={14} /></div>
@@ -318,7 +318,7 @@ export default function Tailor({ addToast }) {
 
                 <button 
                     className="btn btn-primary" 
-                    style={{ width: '100%', maxWidth: 400, padding: '16px 24px', fontSize: 16 }} 
+                    style={{ width: '100%', maxWidth: 320, padding: '13px 24px', fontSize: 14, fontWeight: 700 }} 
                     onClick={handleGenerate} 
                     disabled={!canGenerate || isLoading}
                 >

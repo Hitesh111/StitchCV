@@ -82,7 +82,6 @@ export default function Header({ user, onLogout, publicMode = false }) {
 
                     {/* Right Controls */}
                     <div className="header-actions">
-                        <span className="version-string">Studio v2.0.0</span>
                         {publicMode && !user && (
                             <Link className="btn btn-primary header-cta" to="/signup">
                                 Get started

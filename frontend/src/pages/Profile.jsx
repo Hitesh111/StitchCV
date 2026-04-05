@@ -215,9 +215,9 @@ export default function Profile({ addToast }) {
                     {/* Personal & Summary */}
                     {activeTab === 'personal' && (
                         <div className="form-section fade-in">
-                            <h3 style={{ marginTop: 0, marginBottom: 24, fontSize: 18, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 8 }}>
-                                <User size={20} color="var(--blue)" /> Personal Information
-                            </h3>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 24, paddingBottom: 12, borderBottom: '1px solid var(--border)' }}>
+                                <span className="label-caps">Personal Information</span>
+                            </div>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 32 }}>
                                 <div className="form-group" style={{ margin: 0 }}>
                                     <label className="form-label">Full Name</label>
@@ -245,9 +245,9 @@ export default function Profile({ addToast }) {
                                 </div>
                             </div>
                             
-                            <h3 style={{ marginTop: 0, marginBottom: 24, fontSize: 18, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 8 }}>
-                                <FileText size={20} color="var(--blue)" /> Professional Summary
-                            </h3>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 32, marginBottom: 24, paddingBottom: 12, borderBottom: '1px solid var(--border)' }}>
+                                <span className="label-caps">Professional Summary</span>
+                            </div>
                             <div className="form-group" style={{ margin: 0 }}>
                                 <textarea 
                                     className="form-input" 
@@ -265,9 +265,7 @@ export default function Profile({ addToast }) {
                     {activeTab === 'experience' && (
                         <div className="form-section fade-in">
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-                                <h3 style={{ margin: 0, fontSize: 18, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 8 }}>
-                                    <Briefcase size={20} color="var(--blue)" /> Work Experience
-                                </h3>
+                                <span className="label-caps" style={{ marginBottom: 0 }}>Work Experience</span>
                                 <button className="btn btn-sm btn-secondary" onClick={() => addArrayItem('experience', { company: '', title: '', date: '', location: '', description: [] })}>
                                     <Plus size={14} /> Add Role
                                 </button>
@@ -328,9 +326,7 @@ export default function Profile({ addToast }) {
                     {activeTab === 'education' && (
                         <div className="form-section fade-in">
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-                                <h3 style={{ margin: 0, fontSize: 18, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 8 }}>
-                                    <GraduationCap size={20} color="var(--blue)" /> Education
-                                </h3>
+                                <span className="label-caps" style={{ marginBottom: 0 }}>Education</span>
                                 <button className="btn btn-sm btn-secondary" onClick={() => addArrayItem('education', { institution: '', degree: '', date: '', location: '', gpa: '', details: [] })}>
                                     <Plus size={14} /> Add Education
                                 </button>
@@ -390,9 +386,7 @@ export default function Profile({ addToast }) {
                     {activeTab === 'projects' && (
                         <div className="form-section fade-in">
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-                                <h3 style={{ margin: 0, fontSize: 18, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 8 }}>
-                                    <Code size={20} color="var(--blue)" /> Portfolio Projects
-                                </h3>
+                                <span className="label-caps" style={{ marginBottom: 0 }}>Portfolio Projects</span>
                                 <button className="btn btn-sm btn-secondary" onClick={() => addArrayItem('projects', { name: '', description: '', link: '', technologies: [] })}>
                                     <Plus size={14} /> Add Project
                                 </button>
@@ -452,9 +446,9 @@ export default function Profile({ addToast }) {
                     {/* Skills & Certs */}
                     {activeTab === 'skills' && (
                         <div className="form-section fade-in">
-                            <h3 style={{ marginTop: 0, marginBottom: 24, fontSize: 18, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 8 }}>
-                                <Award size={20} color="var(--blue)" /> Skills & Certifications
-                            </h3>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 24, paddingBottom: 12, borderBottom: '1px solid var(--border)' }}>
+                                <span className="label-caps">Skills &amp; Certifications</span>
+                            </div>
                             
                             <div className="form-group" style={{ marginBottom: 32 }}>
                                 <label className="form-label">Skills (Comma separated)</label>
@@ -472,7 +466,7 @@ export default function Profile({ addToast }) {
                             </div>
 
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-                                <h4 style={{ margin: 0, fontSize: 16, color: 'var(--text-primary)' }}>Certifications</h4>
+                                <span className="label-caps" style={{ marginBottom: 0 }}>Certifications</span>
                                 <button className="btn btn-sm btn-secondary" onClick={() => addArrayItem('certifications', { name: '', issuer: '', year: '' })}>
                                     <Plus size={14} /> Add Cert
                                 </button>
