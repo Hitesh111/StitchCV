@@ -1,8 +1,21 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { FileText, Briefcase, Calendar, X, Printer, Eye, Trash2, Edit, ArrowRight } from 'lucide-react';
+import { FileText, Briefcase, Calendar, X, Eye, Trash2, Edit, ArrowRight, MoreHorizontal, Printer } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import api from '../services/api';
 import ResumeTemplate from '../components/ResumeTemplate';
+
+function AtsBar({ pct }) {
+    if (pct == null) return <span style={{ color: 'var(--text-muted)', fontSize: 11 }}>—</span>;
+    return (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{ width: 6, height: 6, borderRadius: '50%', background: pct >= 70 ? 'var(--success)' : '#D4A017', flexShrink: 0 }} />
+            <div style={{ flex: 1, height: 3, background: 'var(--border)', borderRadius: 2, overflow: 'hidden', width: 56 }}>
+                <div style={{ height: '100%', width: `${pct}%`, background: pct >= 70 ? 'var(--success)' : '#D4A017', borderRadius: 2, transition: 'width 0.6s ease' }} />
+            </div>
+            <span style={{ fontSize: 12, color: 'var(--text-primary)', fontWeight: 500, fontVariantNumeric: 'tabular-nums' }}>{pct}%</span>
+        </div>
+    );
+}
 
 export default function Dashboard({ addToast }) {
     const [applications, setApplications] = useState([]);
@@ -12,6 +25,8 @@ export default function Dashboard({ addToast }) {
     const [viewingJob, setViewingJob] = useState(null);
     const [editingApp, setEditingApp] = useState(null);
     const [editForm, setEditForm] = useState({ company: '', role: '', status: '' });
+    const [openOverflow, setOpenOverflow] = useState(null); // appId | null
+    const [confirmDelete, setConfirmDelete] = useState(null); // appId | null
     const pdfRef = useRef(null);
 
     useEffect(() => {
@@ -21,36 +36,34 @@ export default function Dashboard({ addToast }) {
            .finally(() => setIsLoading(false));
     }, [addToast]);
 
+    // Close overflow on outside click
+    useEffect(() => {
+        if (!openOverflow) return;
+        const handler = () => setOpenOverflow(null);
+        document.addEventListener('click', handler);
+        return () => document.removeEventListener('click', handler);
+    }, [openOverflow]);
+
     const handleViewResume = async (app) => {
         try {
-            setViewingResume(null);
-            setViewingJob(null);
-            
+            setViewingResume(null); setViewingJob(null);
             const [resumeData, jobData] = await Promise.all([
                 api.getApplicationResume(app.id),
                 api.getJob(app.job_id).catch(() => ({ failed: true }))
             ]);
-            
-            setViewingResume(resumeData);
-            setViewingJob(jobData);
-            setViewingApp(app);
-        } catch(e) {
+            setViewingResume(resumeData); setViewingJob(jobData); setViewingApp(app);
+        } catch (e) {
             addToast('Failed to fetch resume: ' + e.message, 'error');
         }
     };
 
-    const handlePrintPDF = () => {
-        window.print();
-    };
-
     const handleDelete = async (appId) => {
-        if (!window.confirm("Are you sure you want to delete this application? This cannot be undone.")) return;
-        
         try {
             await api.deleteApplication(appId);
             setApplications(prev => prev.filter(a => a.id !== appId));
-            addToast('Application deleted successfully', 'success');
-        } catch(e) {
+            setConfirmDelete(null);
+            addToast('Application deleted', 'success');
+        } catch (e) {
             addToast('Failed to delete: ' + e.message, 'error');
         }
     };
@@ -58,6 +71,7 @@ export default function Dashboard({ addToast }) {
     const handleEdit = (app) => {
         setEditingApp(app);
         setEditForm({ company: app.company, role: app.role, status: app.status });
+        setOpenOverflow(null);
     };
 
     const handleSaveEdit = async (e) => {
@@ -66,144 +80,189 @@ export default function Dashboard({ addToast }) {
             await api.updateApplication(editingApp.id, editForm);
             setApplications(prev => prev.map(a => a.id === editingApp.id ? { ...a, ...editForm } : a));
             setEditingApp(null);
-            addToast('Application updated', 'success');
-        } catch(e) {
+            addToast('Updated', 'success');
+        } catch (e) {
             addToast('Failed to update: ' + e.message, 'error');
         }
+    };
+
+    // Derive ATS pct from stored scores if available
+    const getAtsPct = (app) => {
+        if (app.output_scores) {
+            const vals = Object.values(app.output_scores);
+            return vals.length ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) : null;
+        }
+        return null;
     };
 
     return (
         <>
             <div style={{ paddingBottom: 64 }} className="no-print">
-                <div className="hero-split app-hero tailor-hero" style={{ marginBottom: 24 }}>
-                    <div className="hero-split-copy">
-                        <div className="page-kicker">Saved</div>
-                        <h2 className="page-title hero-title">My Applications</h2>
-                        <p className="page-subtitle hero-subtitle">Review and manage your previously tailored job applications.</p>
+                {/* Workspace page header */}
+                <div className="ws-page-header">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <span className="ws-page-title">Applications</span>
+                        {!isLoading && applications.length > 0 && (
+                            <span className="count-badge">{applications.length} tailored</span>
+                        )}
                     </div>
+                    <Link to="/tailor" className="btn btn-ghost btn-sm" style={{ fontSize: 11 }}>
+                        New <ArrowRight size={11} />
+                    </Link>
                 </div>
 
-                <div className="showcase-panel app-panel" style={{ marginBottom: 32 }}>
+                <div style={{
+                    background: 'var(--bg-card)',
+                    border: '0.5px solid var(--border)',
+                    borderRadius: 10,
+                    overflow: 'hidden'
+                }}>
                     {isLoading ? (
-                        <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>Loading your dashboard...</div>
+                        <div style={{ padding: 48, textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
+                            Loading...
+                        </div>
                     ) : applications.length === 0 ? (
                         <div className="empty-state">
-                            <FileText size={36} style={{ color: 'var(--text-muted)', marginBottom: 14, opacity: 0.5 }} />
-                            <h3 style={{ marginBottom: 6 }}>No applications yet</h3>
-                            <p style={{ marginBottom: 20, maxWidth: 280, textAlign: 'center' }}>Craft your first AI-tailored resume and it will appear here.</p>
-                            <Link to="/tailor" className="btn btn-primary" style={{ gap: 8 }}>
-                                Go to Tailor <ArrowRight size={14} />
+                            <FileText size={32} style={{ color: 'var(--text-muted)', marginBottom: 12, opacity: 0.3 }} />
+                            <h3 style={{ fontSize: 14, fontWeight: 500, marginBottom: 6 }}>No applications yet</h3>
+                            <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 20, maxWidth: 240 }}>
+                                Craft your first AI-tailored resume and it will appear here.
+                            </p>
+                            <Link to="/tailor" className="btn btn-ghost btn-sm" style={{ fontSize: 12, gap: 6 }}>
+                                Go to Tailor <ArrowRight size={12} />
                             </Link>
                         </div>
                     ) : (
-                        <div className="table-responsive" style={{ backgroundColor: 'var(--bg-card)', borderRadius: 'var(--radius-card)', border: '1px solid var(--border)'}}>
-                            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-                                <thead>
-                                    <tr style={{ borderBottom: '1px solid var(--border)', fontSize: 12, color: 'var(--text-muted)', textTransform: 'uppercase' }}>
-                                        <th style={{ padding: '16px 24px', fontWeight: 600 }}>Date</th>
-                                        <th style={{ padding: '16px 24px', fontWeight: 600 }}>Job Details</th>
-                                        <th style={{ padding: '16px 24px', fontWeight: 600 }}>Status</th>
-                                        <th style={{ padding: '16px 24px', fontWeight: 600, textAlign: 'right' }}>Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {applications.map(app => (
-                                        <tr key={app.id} style={{ borderBottom: '1px solid var(--border)', transition: 'background 120ms ease', cursor: 'default' }}
-                                            onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-surface)'}
-                                            onMouseLeave={e => e.currentTarget.style.background = ''}>
-                                            <td style={{ padding: '20px 24px', whiteSpace: 'nowrap', color: 'var(--text-secondary)' }}>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                                    <Calendar size={14} />
-                                                    <span>{new Date(app.created_at).toLocaleDateString()}</span>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                            <thead>
+                                <tr style={{
+                                    borderBottom: '0.5px solid var(--border)',
+                                    fontSize: 11, color: 'var(--text-muted)', fontWeight: 500
+                                }}>
+                                    <th style={{ padding: '12px 20px' }}>Date</th>
+                                    <th style={{ padding: '12px 20px' }}>Role / Company</th>
+                                    <th style={{ padding: '12px 20px' }}>ATS match</th>
+                                    <th style={{ padding: '12px 20px', textAlign: 'right' }}>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {applications.map(app => (
+                                    <tr key={app.id}
+                                        style={{ borderBottom: '0.5px solid var(--border)', transition: 'background 100ms ease' }}
+                                        onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-input, var(--bg-surface))'}
+                                        onMouseLeave={e => e.currentTarget.style.background = ''}>
+
+                                        {/* Date */}
+                                        <td style={{ padding: '14px 20px', whiteSpace: 'nowrap', color: 'var(--text-muted)', fontSize: 12 }}>
+                                            {new Date(app.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                        </td>
+
+                                        {/* Role + Company */}
+                                        <td style={{ padding: '14px 20px' }}>
+                                            <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', marginBottom: 2 }}>
+                                                {app.role || 'Untitled role'}
+                                            </div>
+                                            <div style={{ fontSize: 11, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                                                <Briefcase size={10} /> {app.company || 'Company'}
+                                            </div>
+                                        </td>
+
+                                        {/* ATS Match */}
+                                        <td style={{ padding: '14px 20px' }}>
+                                            {confirmDelete === app.id ? (
+                                                <span />
+                                            ) : (
+                                                <AtsBar pct={getAtsPct(app)} />
+                                            )}
+                                        </td>
+
+                                        {/* Actions */}
+                                        <td style={{ padding: '14px 20px', textAlign: 'right' }}>
+                                            {confirmDelete === app.id ? (
+                                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8 }}>
+                                                    <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Delete?</span>
+                                                    <button className="btn btn-sm" style={{ fontSize: 11, color: 'var(--error)', background: 'rgba(220,38,38,0.08)', padding: '5px 10px' }}
+                                                        onClick={() => handleDelete(app.id)}>Confirm</button>
+                                                    <button className="btn btn-ghost btn-sm" style={{ fontSize: 11, padding: '5px 10px' }}
+                                                        onClick={() => setConfirmDelete(null)}>Cancel</button>
                                                 </div>
-                                            </td>
-                                            <td style={{ padding: '20px 24px' }}>
-                                                <div style={{ fontWeight: 600, marginBottom: 4 }}>{app.role || 'Custom Role'}</div>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--text-secondary)' }}>
-                                                    <Briefcase size={12} /> {app.company || 'Target Company'}
-                                                </div>
-                                            </td>
-                                            <td style={{ padding: '20px 24px' }}>
-                                                <span style={{ 
-                                                    display: 'inline-flex', padding: '4px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600, textTransform: 'uppercase',
-                                                    backgroundColor: 'var(--success-bg)', color: 'var(--success)'
-                                                }}>{app.status.replace('_', ' ')}</span>
-                                            </td>
-                                            <td style={{ padding: '20px 24px', textAlign: 'right' }}>
+                                            ) : (
                                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6 }}>
-                                                    <button className="btn btn-sm btn-secondary" onClick={() => handleViewResume(app)} title="View Resume">
-                                                        <Eye size={14} /> View
+                                                    <button className="btn btn-sm" onClick={() => handleViewResume(app)}
+                                                        style={{ fontSize: 11, background: 'rgba(212,160,23,0.1)', color: '#D4A017', border: '0.5px solid rgba(212,160,23,0.2)', padding: '5px 12px' }}>
+                                                        <Eye size={12} /> View
                                                     </button>
-                                                    <button className="btn btn-sm btn-secondary" onClick={() => handleEdit(app)} title="Edit Details">
-                                                        <Edit size={14} /> Edit
+                                                    <button className="btn btn-ghost btn-sm" onClick={() => handleEdit(app)}
+                                                        style={{ fontSize: 11, padding: '5px 10px' }}>
+                                                        <Edit size={12} /> Edit
                                                     </button>
-                                                    <button className="btn btn-sm" onClick={() => handleDelete(app.id)} title="Delete Application" style={{ color: 'var(--error)', backgroundColor: 'var(--success-bg)' }}>
-                                                        <Trash2 size={14} /> Delete
-                                                    </button>
+                                                    <div className="overflow-menu-wrapper">
+                                                        <button className="btn btn-ghost btn-sm"
+                                                            style={{ fontSize: 11, padding: '5px 8px' }}
+                                                            onClick={e => { e.stopPropagation(); setOpenOverflow(openOverflow === app.id ? null : app.id); }}>
+                                                            <MoreHorizontal size={14} />
+                                                        </button>
+                                                        {openOverflow === app.id && (
+                                                            <div className="overflow-menu" onClick={e => e.stopPropagation()}>
+                                                                <button className="overflow-menu-item danger"
+                                                                    onClick={() => { setOpenOverflow(null); setConfirmDelete(app.id); }}>
+                                                                    <Trash2 size={12} /> Delete
+                                                                </button>
+                                                            </div>
+                                                        )}
+                                                    </div>
                                                 </div>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
+                                            )}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
                     )}
                 </div>
             </div>
 
-            {/* Application Editing Modal */}
+            {/* Edit modal */}
             {editingApp && (
                 <div className="modal-overlay no-print" onClick={() => setEditingApp(null)}>
-                    <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 480, padding: 0 }}>
-                        <div className="modal-header" style={{ padding: '24px 28px', borderBottom: '1px solid var(--border)', margin: 0 }}>
+                    <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 420, padding: 0 }}>
+                        <div className="modal-header" style={{ padding: '20px 24px', borderBottom: '0.5px solid var(--border)', margin: 0 }}>
                             <div>
-                                <h2 style={{ fontSize: '1.25rem', margin: 0 }}>Edit Application</h2>
-                                <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: 4 }}>Update tracking details</p>
+                                <h2 style={{ fontSize: 14, fontWeight: 500, margin: 0 }}>Edit application</h2>
+                                <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 3 }}>Update tracking details</p>
                             </div>
-                            <button className="modal-close" onClick={() => setEditingApp(null)} style={{ alignSelf: 'flex-start' }}>
-                                <X size={20} />
+                            <button className="modal-close" onClick={() => setEditingApp(null)}>
+                                <X size={18} />
                             </button>
                         </div>
-                        
-                        <div style={{ padding: '28px' }}>
-                            <form onSubmit={handleSaveEdit} style={{ display: 'flex', flexDirection: 'column' }}>
-                                <div className="form-group">
-                                    <label className="form-label">Company Name</label>
-                                    <input 
-                                        className="form-input" 
-                                        value={editForm.company} 
-                                        onChange={e => setEditForm({...editForm, company: e.target.value})} 
-                                        required 
-                                        placeholder="e.g. Acme Corp"
-                                    />
+                        <div style={{ padding: 24 }}>
+                            <form onSubmit={handleSaveEdit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                                <div className="form-group" style={{ marginBottom: 0 }}>
+                                    <label className="form-label">Company name</label>
+                                    <input className="form-input" value={editForm.company}
+                                        onChange={e => setEditForm({ ...editForm, company: e.target.value })}
+                                        required placeholder="e.g. Acme Corp" />
                                 </div>
-                                <div className="form-group">
-                                    <label className="form-label">Job Role</label>
-                                    <input 
-                                        className="form-input" 
-                                        value={editForm.role} 
-                                        onChange={e => setEditForm({...editForm, role: e.target.value})} 
-                                        required 
-                                        placeholder="e.g. Frontend Engineer"
-                                    />
+                                <div className="form-group" style={{ marginBottom: 0 }}>
+                                    <label className="form-label">Role</label>
+                                    <input className="form-input" value={editForm.role}
+                                        onChange={e => setEditForm({ ...editForm, role: e.target.value })}
+                                        required placeholder="e.g. Frontend Engineer" />
                                 </div>
-                                <div className="form-group" style={{ marginBottom: 32 }}>
-                                    <label className="form-label">Current Status</label>
-                                    <select 
-                                        className="form-input" 
-                                        value={editForm.status} 
-                                        onChange={e => setEditForm({...editForm, status: e.target.value})}
-                                    >
-                                        <option value="pending_review">Pending Review</option>
+                                <div className="form-group" style={{ marginBottom: 0 }}>
+                                    <label className="form-label">Status</label>
+                                    <select className="form-input" value={editForm.status}
+                                        onChange={e => setEditForm({ ...editForm, status: e.target.value })}>
+                                        <option value="pending_review">Pending review</option>
                                         <option value="approved">Approved</option>
                                         <option value="submitted">Submitted</option>
                                         <option value="failed">Failed</option>
                                         <option value="withdrawn">Withdrawn</option>
                                     </select>
                                 </div>
-                                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
-                                    <button type="button" className="btn btn-secondary" onClick={() => setEditingApp(null)}>Cancel</button>
-                                    <button type="submit" className="btn btn-primary">Save Changes</button>
+                                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 4 }}>
+                                    <button type="button" className="btn btn-ghost btn-sm" onClick={() => setEditingApp(null)}>Cancel</button>
+                                    <button type="submit" className="btn btn-primary btn-sm">Save</button>
                                 </div>
                             </form>
                         </div>
@@ -211,86 +270,77 @@ export default function Dashboard({ addToast }) {
                 </div>
             )}
 
-            {/* Resume Viewer Modal */}
+            {/* Resume viewer modal */}
             {viewingResume && (
-                <div className="modal-overlay no-print" onClick={() => { setViewingResume(null); setViewingJob(null); }} style={{ padding: '32px', backgroundColor: 'rgba(0, 0, 0, 0.65)', backdropFilter: 'blur(4px)' }}>
-                    <div className="modal-content resume-viewer-modal" onClick={e => e.stopPropagation()} style={{ 
-                        maxWidth: '1400px', 
-                        width: '100%', 
-                        height: '100%', 
-                        margin: '0 auto', 
-                        borderRadius: '16px', 
-                        border: '1px solid var(--border)', 
-                        boxShadow: '0 24px 48px rgba(0,0,0,0.5)', 
-                        display: 'flex', 
-                        flexDirection: 'column',
-                        overflow: 'hidden',
-                        backgroundColor: 'var(--bg-surface)'
+                <div className="modal-overlay no-print"
+                    onClick={() => { setViewingResume(null); setViewingJob(null); }}
+                    style={{ padding: '28px', backgroundColor: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)' }}>
+                    <div className="modal-content resume-viewer-modal" onClick={e => e.stopPropagation()} style={{
+                        maxWidth: 1360, width: '100%', height: '100%', margin: '0 auto',
+                        borderRadius: 12, border: '0.5px solid var(--border)',
+                        boxShadow: '0 24px 64px rgba(0,0,0,0.5)',
+                        display: 'flex', flexDirection: 'column', overflow: 'hidden',
+                        backgroundColor: 'var(--bg-card)'
                     }}>
-                        <div style={{ padding: '20px 32px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'var(--bg-card)' }}>
+                        {/* Modal header */}
+                        <div style={{
+                            padding: '16px 24px', borderBottom: '0.5px solid var(--border)',
+                            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                            background: 'var(--bg-surface)'
+                        }}>
                             <div>
-                                <h3 style={{ margin: 0, fontSize: 18 }}>{viewingApp?.company}</h3>
-                                <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{viewingApp?.role}</div>
+                                <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-primary)' }}>{viewingApp?.company}</div>
+                                <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{viewingApp?.role}</div>
                             </div>
-                            <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-                                <button className="btn btn-primary" onClick={() => {
+                            <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                                <button className="btn btn-primary btn-sm" onClick={() => {
                                     const originalTitle = document.title;
                                     const originalPath = window.location.pathname;
-                                    const candidateName = viewingResume?.personal_info?.name ? viewingResume.personal_info.name.replace(/\s+/g, '_') : 'Candidate';
-                                    document.title = `${candidateName}_Resume`; 
+                                    const candidateName = viewingResume?.personal_info?.name
+                                        ? viewingResume.personal_info.name.replace(/\s+/g, '_') : 'Candidate';
+                                    document.title = `${candidateName}_Resume`;
                                     window.history.replaceState(null, '', '/');
-                                    
                                     setTimeout(() => {
                                         window.print();
                                         document.title = originalTitle;
                                         window.history.replaceState(null, '', originalPath);
                                     }, 100);
                                 }}>
-                                    <Printer size={16} color="#1C1917" /> Download PDF
+                                    <Printer size={12} /> Download PDF
                                 </button>
                                 <button className="modal-close" onClick={() => { setViewingResume(null); setViewingJob(null); }}>
-                                    <X size={20} />
+                                    <X size={18} />
                                 </button>
                             </div>
                         </div>
+
                         <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
-                            {/* JD Sidebar */}
-                            <div style={{ 
-                                width: '380px', 
-                                borderRight: '1px solid var(--border)', 
-                                padding: 24, 
-                                overflowY: 'auto',
-                                backgroundColor: 'var(--bg-surface)' 
+                            {/* JD sidebar */}
+                            <div style={{
+                                width: 340, borderRight: '0.5px solid var(--border)',
+                                padding: 20, overflowY: 'auto', background: 'var(--bg-surface)'
                             }}>
-                                <h4 style={{ margin: '0 0 16px 0', fontSize: '0.95rem', color: 'var(--text-primary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Job Description</h4>
+                                <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 500, marginBottom: 12 }}>Job description</div>
                                 {viewingJob ? (
-                                    <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>
+                                    <div style={{ fontSize: 12, color: 'var(--text-secondary)', whiteSpace: 'pre-wrap', lineHeight: 1.65 }}>
                                         {viewingJob.failed ? (
-                                            <span style={{ fontStyle: 'italic', color: 'var(--error)' }}>Failed to fetch job description.</span>
+                                            <span style={{ fontStyle: 'italic', color: 'var(--error)' }}>Failed to load</span>
                                         ) : (
-                                            viewingJob.job_description || <span style={{ fontStyle: 'italic' }}>No job description text recorded for this application.</span>
+                                            viewingJob.job_description || <span style={{ fontStyle: 'italic', color: 'var(--text-muted)' }}>No description recorded</span>
                                         )}
                                     </div>
                                 ) : (
-                                    <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Loading description...</div>
+                                    <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Loading...</div>
                                 )}
                             </div>
-                            
-                            {/* Resume Preview Pane */}
-                            <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', backgroundColor: 'var(--bg-page)', padding: '32px 0' }}>
-                                <div style={{ 
-                                    display: 'flex',
-                                    justifyContent: 'center',
-                                    alignItems: 'flex-start',
-                                    minHeight: '100%'
-                                }}>
+
+                            {/* Resume pane */}
+                            <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', background: 'var(--bg-page)', padding: '28px 0' }}>
+                                <div style={{ display: 'flex', justifyContent: 'center', minHeight: '100%' }}>
                                     <div style={{
-                                        width: '816px',
-                                        minHeight: '1056px',
-                                        backgroundColor: '#fff',
-                                        boxShadow: '0 8px 32px rgba(0,0,0,0.08)',
-                                        borderRadius: '4px',
-                                        padding: 'var(--space-4)',
+                                        width: 816, minHeight: 1056,
+                                        backgroundColor: '#fff', boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+                                        borderRadius: 3
                                     }}>
                                         <ResumeTemplate data={viewingResume} ref={pdfRef} />
                                     </div>
@@ -301,22 +351,11 @@ export default function Dashboard({ addToast }) {
                 </div>
             )}
 
-            {/* Print-only container */}
             {viewingResume && (
                 <div className="print-only">
                     <ResumeTemplate data={viewingResume} />
                 </div>
             )}
-
-            <style jsx="true">{`
-                .resume-viewer-modal {
-                    padding: 0 !important;
-                    background-color: var(--bg-surface);
-                    border: 1px solid var(--border);
-                    border-radius: var(--radius-card);
-                    overflow: hidden;
-                }
-            `}</style>
         </>
     );
 }
